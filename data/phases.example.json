@@ -1,0 +1,74 @@
+[
+ {
+  "Phase": "Strength Development",
+  "Start": "2026-08-27",
+  "End": "2026-09-16",
+  "Colour": "",
+  "Focus": "Gym-based strength work (squats, deadlifts, single-leg and core) to build a robust base and lower injury risk before training load rises.",
+  "Status": ""
+ },
+ {
+  "Phase": "Capacity Rebuild",
+  "Start": "2026-09-17",
+  "End": "2026-10-07",
+  "Colour": "",
+  "Focus": "Rebuilding your aerobic capacity in bike, swim and run to restructure your fitness from weight lifting to intensity and endurance based sport.",
+  "Status": ""
+ },
+ {
+  "Phase": "Neural Power",
+  "Start": "2026-10-08",
+  "End": "2026-11-06",
+  "Colour": "#d84d04",
+  "Focus": "Short, fast, high-quality efforts (sprints, strides, hill reps and explosive strength) to train the nervous system for speed and power. Finishes with a test day.",
+  "Status": ""
+ },
+ {
+  "Phase": "Power Endurance",
+  "Start": "2026-11-07",
+  "End": "2026-12-04",
+  "Colour": "",
+  "Focus": "Holding power for longer: repeated hard efforts with shorter recoveries on the bike and run, so the speed built in Neural Power lasts over race distances.",
+  "Status": ""
+ },
+ {
+  "Phase": "Waiting on test results",
+  "Start": "2026-12-05",
+  "End": "2027-03-14",
+  "Colour": "",
+  "Focus": "Waiting on test results. This block will be planned once your test results are in; tell Claude its name and focus and it will be added here.",
+  "Status": "TBC"
+ },
+ {
+  "Phase": "Waiting on test results",
+  "Start": "2027-03-15",
+  "End": "2027-05-23",
+  "Colour": "",
+  "Focus": "Waiting on test results. This block will be planned once your test results are in; tell Claude its name and focus and it will be added here.",
+  "Status": "TBC"
+ },
+ {
+  "Phase": "Waiting on test results",
+  "Start": "2027-05-24",
+  "End": "2027-08-01",
+  "Colour": "",
+  "Focus": "Waiting on test results. This block will be planned once your test results are in; tell Claude its name and focus and it will be added here.",
+  "Status": "TBC"
+ },
+ {
+  "Phase": "Peak",
+  "Start": "2027-08-02",
+  "End": "2027-09-26",
+  "Colour": "",
+  "Focus": "The highest-quality race-pace work and full race rehearsals, with volume holding steady.",
+  "Status": "TBC"
+ },
+ {
+  "Phase": "Taper",
+  "Start": "2027-09-27",
+  "End": "2027-10-14",
+  "Colour": "",
+  "Focus": "Volume drops while some intensity stays, so you reach the start line in London fresh and sharp.",
+  "Status": "TBC"
+ }
+]

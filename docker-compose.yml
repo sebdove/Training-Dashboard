@@ -1,0 +1,11 @@
+services:
+  t100:
+    build: .
+    ports:
+      - "127.0.0.1:8100:8100"
+    environment:
+      # Required because the container listens on all interfaces. Pick any long random string.
+      T100_APP_TOKEN: "change-me-to-a-long-random-string"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped

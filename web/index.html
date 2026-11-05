@@ -1,0 +1,1352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>T100 Training Dashboard</title>
+<meta name="description" content="Your Garmin training, season phases and race countdown for a T100 triathlon.">
+<meta name="theme-color" content="#183029">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="base.css">
+<style>
+  @font-face { font-family: 'HC Montserrat'; font-weight: 400; font-style: normal; font-display: swap; src: url('fonts/montserrat-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'HC Montserrat'; font-weight: 600; font-style: normal; font-display: swap; src: url('fonts/montserrat-latin-600-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'HC Montserrat'; font-weight: 700; font-style: normal; font-display: swap; src: url('fonts/montserrat-latin-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'HC Montserrat'; font-weight: 800; font-style: normal; font-display: swap; src: url('fonts/montserrat-latin-800-normal.woff2') format('woff2'); }
+  #dash-root { --dash-gutter: 0; }
+  .tx {
+    /* Horizon Climbing brand */
+    --hc-green: #00bf6f; --hc-green-dk: #00a761; --hc-forest: #183029; --hc-deep: #041d16; --hc-mist: #e9ebeb; --hc-line: #cbcbcb; --hc-sage: #bbc5c2;
+    --hc-yellow: #faad00; --hc-orange: #d84d04; --hc-blue: #0181d1;
+    --g-blue: var(--hc-green);
+    --hc-font: 'HC Montserrat', 'Montserrat', var(--font-anthropic-sans), sans-serif;
+    /* the brand look everywhere on the page, in light and dark themes alike */
+    --color-fg: #183029; --color-fg-muted: #5d6b67; --color-bg: #e9ebeb; --color-panel: #ffffff; --color-border-line: #dfe3e2;
+    --color-ok: #00a761; --color-warn: #c77700; --color-bad: #d84d04;
+    --cds-chart-grid: #e9ebeb; --cds-chart-axis: #bbc5c2; --cds-chart-muted: #8c9894; --cds-chart-reference: #183029;
+    --cds-text-secondary: #bbc5c2; --cds-surface-popover: #183029; --cds-border: #183029;
+    font-family: var(--hc-font); color: var(--color-fg); background: var(--color-bg); max-width: 1320px; margin-inline: auto; font-size: 15px; line-height: 1.6;
+    padding: 0 0 var(--cds-pad-xl);
+  }
+  .tx > .tx-tabs, .tx > .tx-page { margin-inline: var(--cds-pad-lg); }
+  .tx-tabs { background: transparent; width: fit-content; max-width: 100%; }
+  .tx-section { color: var(--hc-forest); }
+  .tx-section::after { content: ""; flex: 1; height: 1px; background: var(--hc-sage); margin-left: 8px; }
+  .tx-card { box-shadow: 0 1px 0 rgba(24,48,41,.06); }
+  .tx-ready-key, .tx svg text { font-family: var(--hc-font); }
+  .tx h1, .tx h2, .tx h3, .tx .tx-section { font-family: var(--hc-font); }
+  .tx-band { position: relative; overflow: hidden; background: var(--hc-forest); color: #fff; padding: var(--cds-pad-xl) var(--cds-pad-lg) var(--cds-pad-lg); margin-bottom: var(--cds-gap-md); }
+  .tx-band::after { content: ""; position: absolute; top: 0; right: 0; width: 34%; height: 6px; background: var(--hc-green); clip-path: polygon(4% 0, 100% 0, 100% 100%, 0 100%); }
+  .tx-band .brand { display: flex; align-items: center; gap: var(--cds-gap-sm); font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--hc-green); margin-bottom: var(--cds-gap-sm); }
+  .tx-band .brand i { width: 30px; height: 22px; display: inline-block; background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2050%2037%22%3E%3Cpath%20fill%3D%22%2300BF6F%22%20d%3D%22M30%2C0L16.2%2C25.3l-5-9.2L0%2C37h50L30%2C0z%22/%3E%3C/svg%3E") center / contain no-repeat; }
+  .tx-band h1 { font-weight: 800; text-transform: uppercase; font-size: clamp(26px, 3.2vw, 40px); line-height: 1; letter-spacing: -.01em; margin: 0 0 var(--cds-gap-sm); color: #fff; }
+  .tx-band p { margin: 0 0 var(--cds-gap-xs); color: #d6dedb; font-size: 15px; }
+  .tx-band .tx-race b { color: var(--hc-green); }
+  .tx-band b { color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tx-band .tx-tiles { margin: var(--cds-gap-lg) 0 0; gap: 0; border-top: 1px solid rgba(255,255,255,.14); }
+  .tx-band .tx-tile { background: transparent; border: 0; border-right: 1px solid rgba(255,255,255,.14); padding: var(--cds-pad-md) var(--cds-pad-md) var(--cds-pad-sm); }
+  .tx-band .tx-tile:last-child { border-right: 0; }
+  .tx-band .tx-tile .lbl { color: var(--hc-sage); }
+  .tx-band .tx-tile .sub { color: #aebab6; }
+  .tx-band .tx-tile .big { color: #fff; }
+  .tx-band .tx-tile .big small { color: var(--hc-sage); }
+  .tx-band .tx-tile.accent .big { color: var(--hc-green); }
+  .tx-band .tx-good { color: var(--hc-green); } .tx-band .tx-bad { color: #ff8a5b; }
+  .tx b { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tx-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: var(--cds-gap-md); }
+  .tx-tile { padding: var(--cds-pad-md); display: flex; flex-direction: column; gap: 4px; min-height: 6.5rem; }
+  .tx-tile .lbl { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .tx-tile .big { font-family: var(--hc-font); font-weight: 800; font-size: 30px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .tx-tile .big small { font-size: 14px; font-weight: 600; margin-left: 3px; }
+  .tx-tile .sub { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .tx-good { color: var(--hc-green-dk); } .tx-bad { color: var(--hc-orange); }
+  .tx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--cds-gap-md); margin-bottom: var(--cds-gap-md); }
+  .tx-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: 0; padding: var(--cds-pad-lg); min-width: 0; }
+  .tx-card.wide { grid-column: 1 / -1; }
+  .tx-card.t100 { border-top: 4px solid var(--hc-green); }
+  .tx-card h2 { font-size: 16px; line-height: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; margin: 0; color: var(--color-fg); }
+  .tx-card .note { font-size: 13px; color: var(--color-fg-muted); margin: 6px 0 var(--cds-gap-md); }
+  .tx-section { display: flex; align-items: center; gap: 12px; font-size: 22px; line-height: 1.1; font-weight: 800; text-transform: uppercase; letter-spacing: -.01em; margin: var(--cds-gap-xl) 0 var(--cds-gap-md); color: var(--color-fg); }
+  .tx-section::before { content: ""; width: 26px; height: 19px; flex: none; background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2050%2037%22%3E%3Cpath%20fill%3D%22%2300BF6F%22%20d%3D%22M30%2C0L16.2%2C25.3l-5-9.2L0%2C37h50L30%2C0z%22/%3E%3C/svg%3E") center / contain no-repeat; }
+  .tx-section .tag { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: #fff; background: var(--hc-green); padding: 3px 14px; clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%); }
+  .tx-chart { position: relative; min-height: 220px; }
+  .tx-chart.short { min-height: 120px; }
+  .tx-chart.timeline { min-height: 96px; }
+  .tx-chart.ready { min-height: 132px; }
+  .tx-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--color-fg-muted); margin-bottom: var(--cds-gap-sm); }
+  .tx-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .tx-legend i { width: 12px; height: 12px; border-radius: 0; display: inline-block; }
+  .tx-mini { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--cds-gap-lg); }
+  .tx-mini h3 { font-size: 12px; font-weight: 700; color: var(--color-fg-muted); margin: 0 0 var(--cds-gap-xs); text-transform: uppercase; letter-spacing: .06em; }
+  .tx-tip { position: absolute; background: var(--hc-forest); color: #fff; border: 0; border-radius: 0; box-shadow: var(--cds-shadow-popover); padding: 6px 10px; font-size: 12px; pointer-events: none; white-space: nowrap; z-index: 2; font-variant-numeric: tabular-nums; }
+  .tx-tip .d { color: var(--hc-sage); margin-bottom: 2px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .tx-tip .r { display: flex; align-items: center; gap: 6px; }
+  .tx-tip i { width: 8px; height: 8px; display: inline-block; }
+  .tx-fail { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: inherit; height: 100%; color: var(--color-fg-muted); font-size: 13px; }
+  .tx-fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+  .tx-table-wrap { max-height: 26rem; overflow: auto; }
+  .tx table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .tx th { text-align: left; font-size: 11px; font-weight: 700; color: #fff; padding: 8px 10px; border: 0; position: sticky; top: 0; background: var(--hc-forest); text-transform: uppercase; letter-spacing: .06em; }
+  .tx td { padding: 8px 10px; border-bottom: 1px solid var(--color-border-line); }
+  .tx tbody tr:hover td { background: color-mix(in srgb, var(--hc-green) 6%, transparent); }
+  .tx td.num, .tx th.num { text-align: right; }
+  .tx .pill { display: inline-flex; align-items: center; gap: 6px; }
+  .tx .pill i { width: 8px; height: 8px; display: inline-block; transform: rotate(45deg); }
+  @media (max-width: 640px) { .tx .hide-narrow { display: none; } }
+  .tx-tabs { display: flex; gap: 0; border: 1px solid var(--hc-sage); border-width: 0 0 0 1px; margin: 0 0 var(--cds-gap-md); flex-wrap: wrap; }
+  .tx-tab { appearance: none; background: #ffffff; border: 0; border-right: 1px solid var(--hc-sage); border-top: 1px solid var(--hc-sage); border-bottom: 1px solid var(--hc-sage); padding: 14px 22px; font: inherit; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--color-fg); cursor: pointer; border-radius: 0; }
+  .tx-tab:hover { color: var(--hc-green-dk); }
+  .tx-tab[aria-selected="true"] { background: var(--hc-forest); color: #fff; border-color: var(--hc-forest); box-shadow: inset 0 -4px 0 var(--hc-green); }
+  .tx-card .tx-tiles { margin-bottom: var(--cds-gap-sm); }
+  .tx-light { gap: 0; background: var(--color-panel); border: 1px solid var(--color-border-line); margin-bottom: var(--cds-gap-md); }
+  .tx-light .tx-tile { background: transparent; border: 0; border-right: 1px solid var(--hc-line); }
+  .tx-light .tx-tile:last-child { border-right: 0; }
+  .tx-light .tx-tile .lbl, .tx-light .tx-tile .sub, .tx-light .tx-tile .big small { color: var(--color-fg-muted); }
+  .tx-light .tx-tile .big { color: var(--color-fg); }
+  .tx-chart.focus { min-height: 150px; }
+  .tx-chart.te { min-height: 220px; }
+  .tx-chart.ftp { min-height: 200px; }
+  .tx-empty-row td { color: var(--color-fg-muted); text-align: center; padding: var(--cds-pad-lg) var(--cds-pad-sm); }
+  .tx-how { font-size: 13px; color: var(--color-fg-muted); margin: var(--cds-gap-sm) 0 0; padding-left: 12px; border-left: 3px solid var(--hc-green); }
+  .tx-phase-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(10rem, 1fr); gap: 8px; overflow-x: auto; padding: 4px 4px var(--cds-gap-sm); min-height: 7.5rem; }
+  .tx-ph { appearance: none; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 0; border: 1px solid var(--color-border-line); border-left-width: 6px; background: var(--color-panel); color: var(--color-fg); min-height: 7rem; }
+  .tx-ph:hover { border-color: var(--hc-green); }
+  .tx-ph .n { font-weight: 800; font-size: 14px; line-height: 1.2; text-transform: uppercase; letter-spacing: .01em; }
+  .tx-ph .m { font-size: 12px; color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .tx-ph .s { margin-top: auto; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .tx-ph.done { background: var(--hc-mist); opacity: .85; }
+  .tx-ph.done .n, .tx-ph.done .m, .tx-ph.done .s { color: #5d6b67; }
+  .tx-ph.cur { color: #fff; border-color: transparent; }
+  .tx-ph.cur .m, .tx-ph.cur .s { color: inherit; opacity: .9; }
+  .tx-ph.cur .bar { background: color-mix(in srgb, currentColor 35%, transparent); }
+  .tx-ph.cur .bar i { background: currentColor; }
+  .tx-ph.race { background: var(--hc-forest); color: #fff; border-color: var(--hc-forest); border-left-color: var(--hc-green); cursor: default; }
+  .tx-ph.race .m { color: var(--hc-sage); }
+  .tx-ph.race .s { color: var(--hc-green); }
+  .tx-ph[aria-pressed="true"] { outline: 3px solid var(--hc-green); outline-offset: 2px; }
+  .tx-ph .bar { height: 4px; background: rgba(255,255,255,.35); overflow: hidden; }
+  .tx-ph .bar i { display: block; height: 100%; background: #fff; }
+  .tx-phase-detail { margin-top: var(--cds-gap-md); padding: var(--cds-pad-md) var(--cds-pad-lg); border-radius: 0; background: var(--hc-mist); color: var(--hc-forest); border: 0; border-left: 4px solid var(--hc-green); min-height: 5rem; }
+  .tx-phase-detail h3 { margin: 0 0 4px; font-size: 16px; font-weight: 800; text-transform: uppercase; display: flex; align-items: center; gap: 8px; color: var(--hc-forest); }
+  .tx-phase-detail h3 i { width: 10px; height: 10px; display: inline-block; transform: rotate(45deg); }
+  .tx-phase-detail .m { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #4b5b56; margin: 0 0 var(--cds-gap-sm); }
+  .tx-phase-detail p { margin: 0; font-size: 15px; }
+  .tx-phase-key i.pk { transform: rotate(45deg); width: 10px; height: 10px; }
+
+  .tx-mode { margin-left: auto; appearance: none; font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; color: var(--hc-forest); background: var(--hc-green); border: 0; padding: 7px 18px; clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%); }
+  .tx-mode:hover { background: #fff; }
+  .tx-mode[aria-pressed="true"] { background: #ffffff; color: var(--hc-forest); }
+  .tx-mode[aria-pressed="true"]:hover { background: var(--hc-green); }
+  /* Dark mode: the same brand on the site's deep forest green */
+  .tx.tx-dark {
+    --color-fg: #e9ebeb; --color-fg-muted: #9fb0ab; --color-bg: #041d16; --color-panel: #0d2620; --color-border-line: #24423a;
+    --color-ok: #00bf6f; --color-warn: #faad00; --color-bad: #ff7a3d;
+    --cds-chart-grid: #1b3730; --cds-chart-axis: #3a5750; --cds-chart-muted: #6f827c; --cds-chart-reference: #e9ebeb;
+  }
+  .tx-dark .tx-band { background: #183029; }
+  .tx-dark .tx-tabs { background: transparent; border-color: #3a5750; }
+  .tx-dark .tx-tab { background: var(--color-panel); }
+  .tx-dark .tx-tab { color: var(--color-fg); border-color: #3a5750; }
+  .tx-dark .tx-tab:hover { color: var(--hc-green); }
+  .tx-dark .tx-tab[aria-selected="true"] { background: var(--hc-green); color: var(--hc-deep); border-color: var(--hc-green); box-shadow: none; }
+  .tx-dark .tx-section { color: #fff; }
+  .tx-dark .tx-section::after { background: #3a5750; }
+  .tx-dark .tx-card h2 { color: #fff; }
+  .tx-dark .tx th { background: #183029; color: var(--hc-green); }
+  .tx-dark .tx-light .tx-tile { border-right-color: #24423a; }
+  .tx-dark .tx-light .tx-tile .big { color: #fff; }
+  .tx-dark .tx-ph.done { background: #15302a; }
+  .tx-dark .tx-ph.done .n, .tx-dark .tx-ph.done .m, .tx-dark .tx-ph.done .s { color: #8fa29c; }
+  .tx-dark .tx-ph.race { background: var(--hc-deep); border-color: #3a5750; border-left-color: var(--hc-green); }
+  .tx-dark .tx-phase-detail { background: #183029; color: #e9ebeb; }
+  .tx-dark .tx-phase-detail h3 { color: #fff; }
+  .tx-dark .tx-phase-detail .m { color: #9fb0ab; }
+  .tx-dark .tx-tip { background: #e9ebeb; color: #183029; }
+  .tx-dark .tx-tip .d { color: #5d6b67; }
+  .tx-dark .tx-good { color: #00bf6f; } .tx-dark .tx-bad { color: #ff7a3d; }
+  .tx-dark .tx-card { box-shadow: none; }
+  [data-dash-source-state=empty] { color: transparent; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  @media (prefers-reduced-motion: no-preference) {
+    .tx-chart svg { animation: tx-fade var(--cds-dur-slow) var(--cds-ease-out); }
+    @keyframes tx-fade { from { opacity: 0; } to { opacity: 1; } }
+  }
+</style>
+</head>
+<body>
+<div id="dash-root">
+
+<div class="tx">
+  <header class="tx-band" id="overview">
+    <div class="brand"><i></i>Garmin Fenix 8 · T100 race prep<button type="button" class="tx-mode" aria-pressed="false" title="Switch between light and dark"><span class="to-dark">Dark mode</span><span class="to-light" hidden>Light mode</span></button></div>
+    <h1>T100 training dashboard</h1>
+    <p class="tx-race"><b data-draw="race-name" data-source="countdown" data-field="race">—</b> · <b data-draw="race-date" data-source="countdown" data-field="date">—</b> · 2km swim, 80km bike, 18km run</p>
+    <p>This week so far: <b data-draw="t-week" data-source="summary" data-field="week_h">—</b> hours across <b data-draw="t-sessions" data-source="summary" data-field="sessions">—</b> sessions, against a <b data-draw="t-avg" data-source="summary" data-field="avg4_h">—</b> hour weekly average over the previous four weeks.</p>
+
+  <div class="tx-tiles">
+    <div class="tx-tile accent" data-fetchpriority="high">
+      <span class="lbl">Days to race</span>
+      <span class="big"><span data-draw="days" data-source="countdown" data-field="days_to_go">—</span></span>
+      <span class="sub"><span data-draw="weeks" data-source="countdown" data-field="weeks_to_go">—</span> weeks</span>
+    </div>
+    <div class="tx-tile">
+      <span class="lbl">Training phase</span>
+      <span class="big"><span data-draw="phase" data-source="countdown" data-field="phase">—</span></span>
+      <span class="sub">Week <span data-draw="phase-week" data-source="countdown" data-field="phase_week">—</span> · test day <span data-draw="phase-test" data-source="countdown" data-field="phase_days_left">—</span></span>
+    </div>
+    <div class="tx-tile" data-fetchpriority="high">
+      <span class="lbl">This week</span>
+      <span class="big"><span data-draw="week-h" data-source="summary" data-field="week_h">—</span><small>h</small></span>
+      <span class="sub">4-week average <span data-draw="avg-h" data-source="summary" data-field="avg4_h">—</span> h</span>
+    </div>
+    <div class="tx-tile">
+      <span class="lbl">VO2 max (running)</span>
+      <span class="big"><span data-draw="vo2" data-source="summary" data-field="vo2">—</span></span>
+      <span class="sub"><span data-draw="vo2-ch" data-source="summary" data-field="vo2_change">—</span> in 30 days</span>
+    </div>
+    <div class="tx-tile">
+      <span class="lbl">Resting heart rate</span>
+      <span class="big"><span data-draw="o-rhr" data-source="rhr_summary" data-field="rhr">—</span><small>bpm</small></span>
+      <span class="sub"><span data-draw="o-rhr-ch" data-source="rhr_summary" data-field="rhr_change">—</span> bpm in 30 days</span>
+    </div>
+    <div class="tx-tile">
+      <span class="lbl">HRV, 7-day average</span>
+      <span class="big"><span data-draw="hrv" data-source="summary" data-field="hrv7">—</span><small>ms</small></span>
+      <span class="sub">Status: <span data-draw="hrv-status" data-source="summary" data-field="hrv_status">—</span></span>
+    </div>
+    <div class="tx-tile">
+      <span class="lbl">Sleep, 7-day average</span>
+      <span class="big"><span data-draw="sleep" data-source="summary" data-field="sleep7">—</span><small>h</small></span>
+      <span class="sub">Sleep score <span data-draw="sleep-score" data-source="summary" data-field="score7">—</span></span>
+    </div>
+  </div>
+  </header>
+
+  <nav class="tx-tabs" role="tablist" aria-label="Dashboard pages">
+    <button class="tx-tab" role="tab" data-tab="overview" id="tab-overview" aria-controls="page-overview" aria-selected="true">Training overview</button>
+    <button class="tx-tab" role="tab" data-tab="heart" id="tab-heart" aria-controls="page-heart" aria-selected="false">Resting HR and intensity</button>
+    <button class="tx-tab" role="tab" data-tab="devices" id="tab-devices" aria-controls="page-devices" aria-selected="false">Devices and FTP</button>
+    <button class="tx-tab" role="tab" data-tab="settings" id="tab-settings" aria-controls="page-settings" aria-selected="false">Settings</button>
+  </nav>
+
+  <section class="tx-page" id="page-overview" role="tabpanel" aria-labelledby="tab-overview">
+  <h2 class="tx-section">T100 London <span class="tag">Race prep</span></h2>
+  <div class="tx-grid">
+    <section class="tx-card wide t100" id="season">
+      <h2>Season plan to race day</h2>
+      <p class="note">Every phase from the start of your block to race day, in order. Each phase is coloured by its type, taken from the words in its name. Finished phases are faded and the filled one is where you are now. Click a phase to see what it focuses on.</p>
+      <div class="tx-legend tx-phase-key" aria-label="Phase colour code">
+        <span><i class="pk" data-k="strength"></i>Strength</span>
+        <span><i class="pk" data-k="power"></i>Power</span>
+        <span><i class="pk" data-k="power-endurance"></i>Power endurance</span>
+        <span><i class="pk" data-k="endurance"></i>Endurance</span>
+        <span><i class="pk" data-k="capacity"></i>Work capacity</span>
+        <span><i class="pk" data-k="mock"></i>Mock T100 race</span>
+      </div>
+      <div class="tx-phase-row dash-skeleton" data-draw="phase-cards" data-source="phase_list countdown" role="list"></div>
+      <div class="tx-phase-detail" data-draw="phase-detail" data-source="phase_list" aria-live="polite"></div>
+    </section>
+    <section class="tx-card wide t100" id="readiness">
+      <h2>Race-distance readiness</h2>
+      <p class="note">Your longest single swim, bike and run in the last 4 weeks. The dark line on each bar is the T100 distance: 2km, 80km and 18km.</p>
+      <div class="tx-chart ready dash-skeleton" data-draw="readiness" data-source="readiness"></div>
+    </section>
+  </div>
+
+  <h2 class="tx-section">Training volume</h2>
+  <div class="tx-grid">
+    <section class="tx-card wide" id="weekly-hours">
+      <h2>Weekly training hours</h2>
+      <p class="note">Hours per week by discipline over the last 16 weeks, from Garmin Connect. Weeks start on Monday; the latest week is still in progress.</p>
+      <div class="tx-legend">
+        <span><i class="sw" data-i="0"></i>Swim</span>
+        <span><i class="sw" data-i="1"></i>Bike</span>
+        <span><i class="sw" data-i="2"></i>Run</span>
+        <span><i class="sw" data-i="muted"></i>Other (cardio, tennis, strength)</span>
+      </div>
+      <div class="tx-chart dash-skeleton" data-draw="weekly" data-source="weekly"></div>
+    </section>
+    <section class="tx-card" id="split">
+      <h2>Discipline split, last 4 weeks</h2>
+      <p class="note">Share of swim, bike and run time. In a T100 the bike is usually more than half of race time.</p>
+      <div class="tx-chart short dash-skeleton" data-draw="split" data-source="split"></div>
+    </section>
+    <section class="tx-card" id="distance">
+      <h2>Weekly distance</h2>
+      <p class="note">Kilometres per week for each discipline.</p>
+      <div class="tx-mini">
+        <div><h3>Swim (km)</h3><div class="tx-chart short dash-skeleton" data-draw="dist" data-metric="swim_km" data-color="0" data-source="weekly"></div></div>
+        <div><h3>Bike (km)</h3><div class="tx-chart short dash-skeleton" data-draw="dist" data-metric="bike_km" data-color="1" data-source="weekly"></div></div>
+        <div><h3>Run (km)</h3><div class="tx-chart short dash-skeleton" data-draw="dist" data-metric="run_km" data-color="2" data-source="weekly"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <h2 class="tx-section">Fitness and recovery</h2>
+  <div class="tx-grid">
+    <section class="tx-card wide" id="fitness">
+      <h2>Recent trends</h2>
+      <p class="note">VO2 max over 90 days; resting heart rate, overnight HRV and sleep over 30 days. A rising VO2 max, a steady or falling resting HR and steady HRV usually mean fitness is building without too much fatigue.</p>
+      <div class="tx-mini">
+        <div><h3>VO2 max, 90 days</h3><div class="tx-chart short dash-skeleton" data-draw="trend" data-ds="vo2" data-metric="vo2_max" data-source="vo2"></div></div>
+        <div><h3>Resting HR (bpm), 30 days</h3><div class="tx-chart short dash-skeleton" data-draw="trend" data-ds="rhr" data-metric="rhr" data-source="rhr"></div></div>
+        <div><h3>Overnight HRV (ms), 30 days</h3><div class="tx-chart short dash-skeleton" data-draw="trend" data-ds="hrv" data-metric="last_night_avg_hrv_ms" data-source="hrv"></div></div>
+        <div><h3>Sleep (hours), 30 days</h3><div class="tx-chart short dash-skeleton" data-draw="trend" data-ds="sleep" data-metric="sleep_hours" data-source="sleep"></div></div>
+        <div><h3>Sleep score, 30 days</h3><div class="tx-chart short dash-skeleton" data-draw="trend" data-ds="sleep" data-metric="sleep_score" data-source="sleep"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <h2 class="tx-section">Sessions</h2>
+  <div class="tx-grid">
+    <section class="tx-card" id="plan">
+      <h2>Next 7 days</h2>
+      <p class="note">Workouts scheduled on your Garmin Connect calendar.</p>
+      <p class="note tx-empty" hidden>Nothing is scheduled on your Garmin calendar for the next week. Workouts you schedule in Garmin Connect will show here.</p>
+      <div class="tx-table-wrap">
+        <table data-source="plan" data-row-key="key">
+          <thead><tr><th data-field="date">Day</th><th data-field="sport">Sport</th><th data-field="name">Workout</th></tr></thead>
+          <tbody data-draw="plan-body" data-source="plan"></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="tx-card" id="recent">
+      <h2>Recent activities</h2>
+      <p class="note">Your latest 10 sessions from Garmin Connect.</p>
+      <div class="tx-table-wrap">
+        <table data-source="recent" data-row-key="id">
+          <thead><tr><th data-field="start_time">Date</th><th data-field="type">Type</th><th class="hide-narrow" data-field="name">Title</th><th class="num" data-field="distance_km">km</th><th class="num" data-field="time">Time</th><th class="num hide-narrow" data-field="avg_hr">Avg HR</th></tr></thead>
+          <tbody data-draw="recent-body" data-source="recent"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  </section>
+
+  <section class="tx-page" id="page-heart" role="tabpanel" aria-labelledby="tab-heart" hidden>
+    <h2 class="tx-section">Resting heart rate</h2>
+    <div class="tx-tiles tx-light">
+      <div class="tx-tile">
+        <span class="lbl">Resting HR today</span>
+        <span class="big"><span data-draw="h-rhr" data-source="heart_summary" data-field="rhr">—</span><small>bpm</small></span>
+        <span class="sub"><span data-draw="h-rhr-ch" data-source="heart_summary" data-field="rhr_change">—</span> bpm against 30 days ago</span>
+      </div>
+      <div class="tx-tile">
+        <span class="lbl">30-day average</span>
+        <span class="big"><span data-draw="h-rhr-avg" data-source="heart_summary" data-field="rhr_avg">—</span><small>bpm</small></span>
+        <span class="sub">Lowest <span data-draw="h-rhr-min" data-source="heart_summary" data-field="rhr_min">—</span> bpm</span>
+      </div>
+      <div class="tx-tile">
+        <span class="lbl">Training status</span>
+        <span class="big"><span data-draw="h-status" data-source="heart_summary" data-field="status">—</span></span>
+        <span class="sub">Load ratio <span data-draw="h-acwr" data-source="heart_summary" data-field="acwr">—</span> (<span data-draw="h-acwr-st" data-source="heart_summary" data-field="acwr_status">—</span>)</span>
+      </div>
+      <div class="tx-tile">
+        <span class="lbl">Load focus</span>
+        <span class="big"><span data-draw="h-focus" data-source="heart_summary" data-field="focus">—</span></span>
+        <span class="sub">Last 4 weeks, from Garmin</span>
+      </div>
+    </div>
+    <div class="tx-grid">
+      <section class="tx-card wide" id="rhr">
+        <h2>Resting heart rate, 30 days</h2>
+        <p class="note">Daily resting heart rate from your Fenix 8. A falling or steady resting HR usually means you're adapting well; a jump of 5 bpm or more above normal can be a sign of fatigue or illness.</p>
+        <div class="tx-chart dash-skeleton" data-draw="trend" data-ds="rhr" data-metric="rhr" data-tall="1" data-source="rhr"></div>
+      </section>
+    </div>
+
+    <h2 class="tx-section">Aerobic and anaerobic work</h2>
+    <div class="tx-grid">
+      <section class="tx-card" id="focus">
+        <h2>Load focus, last 4 weeks</h2>
+        <p class="note">Your training load in each intensity band. The shaded band is Garmin's target range for you; the bar is what you've done.</p>
+        <div class="tx-chart focus dash-skeleton" data-draw="focus" data-source="balance"></div>
+      </section>
+      <section class="tx-card" id="load">
+        <h2>Acute and chronic load, 30 days</h2>
+        <p class="note">Acute load (last 7 days) against chronic load (your 4–6 week fitness base). The shaded band is Garmin's optimal range for acute load.</p>
+        <div class="tx-legend">
+          <span><i class="sw" data-i="0"></i>Acute load</span>
+          <span><i class="sw" data-i="muted"></i>Chronic load</span>
+        </div>
+        <div class="tx-chart dash-skeleton" data-draw="load" data-source="load"></div>
+      </section>
+      <section class="tx-card wide" id="effect">
+        <h2>Training effect by session</h2>
+        <p class="note">Garmin's aerobic and anaerobic training effect (0–5) for your last 15 activities. 2–3 maintains fitness, 3–4 improves it, above 4 is highly improving.</p>
+        <div class="tx-legend">
+          <span><i class="sw" data-i="0"></i>Aerobic</span>
+          <span><i class="sw" data-i="2"></i>Anaerobic</span>
+        </div>
+        <div class="tx-chart te dash-skeleton" data-draw="te" data-source="effect"></div>
+        <div class="tx-table-wrap">
+          <table data-source="effect" data-row-key="id">
+            <thead><tr><th data-field="start_time">Date</th><th data-field="type">Type</th><th class="hide-narrow" data-field="name">Title</th><th class="num" data-field="aerobic">Aerobic</th><th class="num" data-field="anaerobic">Anaerobic</th><th class="hide-narrow" data-field="label">Main benefit</th><th class="num" data-field="load">Load</th></tr></thead>
+            <tbody data-draw="te-body" data-source="effect"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </section>
+  <section class="tx-page" id="page-devices" role="tabpanel" aria-labelledby="tab-devices" hidden>
+    <h2 class="tx-section">FTP</h2>
+    <div class="tx-tiles tx-light">
+      <div class="tx-tile">
+        <span class="lbl">Current FTP</span>
+        <span class="big"><span data-draw="d-ftp" data-source="device_summary" data-field="ftp">—</span><small>W</small></span>
+        <span class="sub"><span data-draw="d-ftp-src" data-source="device_summary" data-field="ftp_source">—</span>, <span data-draw="d-ftp-date" data-source="device_summary" data-field="ftp_date">—</span></span>
+      </div>
+      <div class="tx-tile">
+        <span class="lbl">FTP per kg</span>
+        <span class="big"><span data-draw="d-wkg" data-source="device_summary" data-field="wkg">—</span><small>W/kg</small></span>
+        <span class="sub">From the latest test with a weight</span>
+      </div>
+      <div class="tx-tile">
+        <span class="lbl">FTP tests logged</span>
+        <span class="big"><span data-draw="d-tests" data-source="device_summary" data-field="tests">—</span></span>
+        <span class="sub">Plus Garmin's own estimate</span>
+      </div>
+      <div class="tx-tile">
+        <span class="lbl">Device readings logged</span>
+        <span class="big"><span data-draw="d-entries" data-source="device_summary" data-field="entries">—</span></span>
+        <span class="sub">Last entry <span data-draw="d-last" data-source="device_summary" data-field="last_date">—</span></span>
+      </div>
+    </div>
+    <div class="tx-grid">
+      <section class="tx-card wide" id="ftp">
+        <h2>FTP history</h2>
+        <p class="note">Every FTP result you've logged, from a Wahoo, Zwift or Garmin test, with Garmin's latest estimate. Garmin's figure is marked when it hasn't been updated for a long time.</p>
+        <div class="tx-legend">
+          <span><i class="sw" data-i="1"></i>Your tests</span>
+          <span><i class="sw" data-i="muted"></i>Garmin estimate</span>
+        </div>
+        <div class="tx-chart ftp dash-skeleton" data-draw="ftp-chart" data-source="ftp_history"></div>
+        <div class="tx-table-wrap">
+          <table data-source="ftp_history" data-row-key="key">
+            <thead><tr><th data-field="date">Date</th><th class="num" data-field="ftp">FTP (W)</th><th class="num" data-field="wkg">W/kg</th><th data-field="source">Source</th><th class="hide-narrow" data-field="notes">Notes</th></tr></thead>
+            <tbody data-draw="ftp-body" data-source="ftp_history"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <h2 class="tx-section">Device readings</h2>
+    <div class="tx-grid">
+      <section class="tx-card wide" id="device-log">
+        <h2>Training device log</h2>
+        <p class="note">Readings from your in-training devices: sensors on your weights (bar speed, power, jump height), bike and power meter sensors, and your Wahoo trainer. Newest first.</p>
+        <div class="tx-table-wrap">
+          <table data-source="device_log" data-row-key="Entry">
+            <thead><tr><th data-field="Date">Date</th><th data-field="Category">Type</th><th data-field="Device">Device</th><th class="hide-narrow" data-field="Session">Session or exercise</th><th data-field="Metric">Metric</th><th class="num" data-field="Value">Value</th><th class="hide-narrow" data-field="Notes">Notes</th></tr></thead>
+            <tbody data-draw="log-body" data-source="device_log"></tbody>
+          </table>
+        </div>
+        <p class="tx-how">To add readings or FTP tests, open the Settings tab and use the forms there. They're saved on your own server.</p>
+      </section>
+      <section class="tx-card" id="garmin-devices">
+        <h2>Devices on your Garmin account</h2>
+        <p class="note">Watches and sensors registered to Garmin Connect.</p>
+        <div class="tx-table-wrap">
+          <table data-source="devices" data-row-key="device_id">
+            <thead><tr><th data-field="device_id">ID</th><th data-field="device_name">Device</th><th class="hide-narrow" data-field="model">Model</th></tr></thead>
+            <tbody data-draw="dev-body" data-source="devices"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </section>
+  <section class="tx-page" id="page-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+    <h2 class="tx-section">Your race</h2>
+    <div class="tx-card">
+      <div class="tx-form" id="race-form">
+        <label>Race name<input name="Race" placeholder="London T100 Triathlon"></label>
+        <label>Race date<input name="Date" type="date"></label>
+        <label>Swim (km)<input name="Swim km" type="number" step="0.1" min="0"></label>
+        <label>Bike (km)<input name="Bike km" type="number" step="1" min="0"></label>
+        <label>Run (km)<input name="Run km" type="number" step="0.1" min="0"></label>
+      </div>
+      <div class="tx-actions"><button class="tx-btn" type="button" id="race-save">Save race</button><span class="tx-msg" id="race-msg"></span></div>
+    </div>
+
+    <h2 class="tx-section">Season phases</h2>
+    <div class="tx-card">
+      <p class="note">One row per phase, in date order. Names containing strength, power, power endurance, endurance, capacity or mock are coloured automatically. Status is optional: leave it blank, or write something like TBC.</p>
+      <div class="tx-table-wrap" style="max-height:none">
+        <table class="tx-edit" id="phase-edit">
+          <thead><tr><th>Phase</th><th>Start</th><th>End</th><th class="hide-narrow">Focus</th><th>Status</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="tx-actions">
+        <button class="tx-btn ghost" type="button" id="phase-add">Add phase</button>
+        <button class="tx-btn" type="button" id="phase-save">Save phases</button>
+        <span class="tx-msg" id="phase-msg"></span>
+      </div>
+    </div>
+
+    <h2 class="tx-section">Log an FTP test</h2>
+    <div class="tx-card">
+      <div class="tx-form" id="ftp-form">
+        <label>Date<input name="Date" type="date" required></label>
+        <label>FTP (W)<input name="FTP (W)" type="number" min="0" step="1" required></label>
+        <label>Weight (kg)<input name="Weight (kg)" type="number" min="0" step="0.1"></label>
+        <label>Where<input name="Source" placeholder="Wahoo KICKR ramp test"></label>
+        <label>Notes<input name="Notes"></label>
+      </div>
+      <div class="tx-actions"><button class="tx-btn" type="button" id="ftp-add">Add FTP result</button><span class="tx-msg" id="ftp-msg"></span></div>
+    </div>
+
+    <h2 class="tx-section">Log a device reading</h2>
+    <div class="tx-card">
+      <div class="tx-form" id="log-form">
+        <label>Date<input name="Date" type="date" required></label>
+        <label>Type<select name="Category"><option>Weights</option><option>Bike</option><option>Wahoo</option><option>Run</option><option>Swim</option><option>Other</option></select></label>
+        <label>Device<input name="Device" placeholder="Bar sensor, power meter…"></label>
+        <label>Session or exercise<input name="Session" placeholder="Back squat"></label>
+        <label>Metric<input name="Metric" placeholder="Mean velocity" required></label>
+        <label>Value<input name="Value" required></label>
+        <label>Unit<input name="Unit" placeholder="m/s"></label>
+        <label>Notes<input name="Notes"></label>
+      </div>
+      <div class="tx-actions"><button class="tx-btn" type="button" id="log-add">Add reading</button><span class="tx-msg" id="log-msg"></span></div>
+      <div class="tx-table-wrap" style="margin-top:16px">
+        <table><thead><tr><th>Date</th><th>Type</th><th>Metric</th><th class="num">Value</th><th></th></tr></thead><tbody id="log-manage"></tbody></table>
+      </div>
+    </div>
+
+    <h2 class="tx-section">Garmin</h2>
+    <div class="tx-card">
+      <p class="note">Data is cached for 15 minutes so Garmin isn't asked on every reload. Refresh to fetch the latest now, after your watch has synced.</p>
+      <div class="tx-form">
+        <label>App token (only if your server asks for one)<input id="app-token" type="password" autocomplete="off"></label>
+      </div>
+      <div class="tx-actions"><button class="tx-btn" type="button" id="garmin-refresh">Refresh from Garmin</button><span class="tx-msg" id="garmin-msg"></span></div>
+    </div>
+  </section>
+
+</div>
+
+</div>
+<script src="d3.min.js"></script>
+<script src="dash-shim.js"></script>
+<script>
+(() => {
+  // ---------- dates the Garmin queries run for, worked out from today ----------
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const setDefaults = () => {
+    const now = new Date();
+    const t = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    const off = (n) => { const d = new Date(t); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
+    const mon = new Date(t); mon.setUTCDate(mon.getUTCDate() - ((mon.getUTCDay() + 6) % 7) - 15 * 7);
+    dash.setParams({ today: iso(t), act_start: iso(mon), h90_start: off(-89), h30_start: off(-29), plan_end: off(7) });
+  };
+  setDefaults();
+
+  // ---------- turning Garmin's answers into rows ----------
+  const parsed = (answer) => (typeof answer === 'string' ? (() => { try { return JSON.parse(answer); } catch (e) { return answer; } })() : answer);
+  dash.loader('activities', {
+    description: 'Garmin’s activity list as rows, following its pages until there are no more (up to 5).',
+    fn: async ({ answer, call, args }) => {
+      let a = parsed(answer);
+      if (typeof a === 'string') throw new Error(a);
+      const out = [...(a.activities || [])];
+      let n = 0;
+      while (a && a.has_more && a.next_page != null && n < 4) {
+        a = parsed(await call('get_activities_by_date', { ...args, page: a.next_page }));
+        if (typeof a === 'string') throw new Error(a);
+        out.push(...(a.activities || [])); n++;
+      }
+      const cols = ['id', 'name', 'type', 'start_time', 'distance_meters', 'duration_seconds', 'avg_hr_bpm', 'max_hr_bpm', 'calories'];
+      return { columns: cols, rows: out.map((r) => Object.fromEntries(cols.map((c) => [c, c === 'id' ? String(r[c]) : (r[c] ?? null)]))), cut: !!(a && a.has_more) };
+    },
+  });
+  const listLoader = (id, key, cols, what) => dash.loader(id, {
+    description: `Garmin’s ${what} as rows, one a day.`,
+    fn: ({ answer }) => {
+      const a = parsed(answer);
+      if (typeof a === 'string') throw new Error(a);
+      return { columns: cols, rows: (a[key] || []).map((r) => Object.fromEntries(cols.map((c) => [c, r[c] ?? null]))) };
+    },
+  });
+  listLoader('vo2', 'trend', ['date', 'vo2_max'], 'VO2 max trend');
+  listLoader('hrv', 'trend', ['date', 'last_night_avg_hrv_ms', 'weekly_avg_hrv_ms', 'status'], 'HRV trend');
+  listLoader('sleep', 'nights', ['date', 'sleep_hours', 'sleep_score', 'sleep_score_qualifier', 'deep_sleep_percent', 'rem_sleep_percent'], 'nightly sleep summaries');
+  dash.loader('plan', {
+    description: 'Garmin’s scheduled workouts as rows; its “No workouts scheduled” reply becomes no rows.',
+    fn: ({ answer }) => {
+      const a = parsed(answer);
+      const cols = ['key', 'date', 'sport', 'name'];
+      if (typeof a === 'string') { if (/^no workouts/i.test(a.trim())) return { columns: cols, rows: [] }; throw new Error(a); }
+      const list = Array.isArray(a) ? a : a.workouts || a.scheduled_workouts || a.items || [];
+      return { columns: cols, rows: list.map((w, i) => {
+        const date = String(w.date || w.scheduled_date || w.calendarDate || '').slice(0, 10);
+        const name = w.name || w.workout_name || w.title || '';
+        return { key: `${date}|${w.id ?? w.workout_id ?? i}`, date, sport: w.sport || w.sport_type || w.type || '', name };
+      }) };
+    },
+  });
+
+  // ---------- worked-out values ----------
+  dash.calc('weekly', {
+    title: 'Weekly training by sport',
+    description: 'Hours and kilometres per Monday-start week, grouped into swim, bike, run and other from the Garmin activity type.',
+    inputs: ['activities'],
+    fn: (activities) => {
+      const sport = (t) => { t = String(t || '').toLowerCase(); return t.includes('swim') ? 'swim' : /cycl|bik|ride|spin/.test(t) ? 'bike' : t.includes('run') ? 'run' : 'other'; };
+      const by = new Map();
+      for (const r of activities) {
+        const d = new Date(String(r.start_time).slice(0, 10) + 'T00:00:00Z');
+        if (isNaN(d)) continue;
+        d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+        const k = d.toISOString().slice(0, 10);
+        const w = by.get(k) || { week: k, swim_h: 0, bike_h: 0, run_h: 0, other_h: 0, swim_km: 0, bike_km: 0, run_km: 0, sessions: 0 };
+        const sp = sport(r.type);
+        w[sp + '_h'] += (Number(r.duration_seconds) || 0) / 3600;
+        if (sp !== 'other') w[sp + '_km'] += (Number(r.distance_meters) || 0) / 1000;
+        w.sessions += 1;
+        by.set(k, w);
+      }
+      const r1 = (x) => Math.round(x * 10) / 10;
+      return [...by.values()].sort((a, b) => (a.week < b.week ? -1 : 1)).map((w) => ({
+        week: w.week, swim_h: r1(w.swim_h), bike_h: r1(w.bike_h), run_h: r1(w.run_h), other_h: r1(w.other_h),
+        total_h: r1(w.swim_h + w.bike_h + w.run_h + w.other_h),
+        swim_km: r1(w.swim_km), bike_km: r1(w.bike_km), run_km: r1(w.run_km), sessions: w.sessions,
+      }));
+    },
+  });
+
+  dash.calc('summary', {
+    title: 'Headline figures',
+    description: 'This week against the previous four weeks; latest VO2 max against 30 days earlier; HRV and sleep over the last 7 days.',
+    inputs: ['weekly', 'vo2', 'hrv', 'sleep'],
+    fn: (weekly, vo2, hrv, sleep) => {
+      const r1 = (x) => (x == null || isNaN(x) ? null : Math.round(x * 10) / 10);
+      const by = (rows) => rows.slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+      const avg = (v) => { v = v.filter((x) => x != null && !isNaN(x)); return v.length ? r1(v.reduce((a, b) => a + b, 0) / v.length) : null; };
+      const last = weekly[weekly.length - 1] || {};
+      const prev = weekly.slice(-5, -1);
+      const v = by(vo2).filter((r) => r.vo2_max != null);
+      const cur = v[v.length - 1], ago = v[Math.max(0, v.length - 31)];
+      const h = by(hrv), s = by(sleep).slice(-7);
+      const hl = h[h.length - 1] || {};
+      return [{
+        week: last.week ?? null, week_h: last.total_h ?? null, sessions: last.sessions ?? null,
+        avg4_h: prev.length ? avg(prev.map((w) => w.total_h)) : null,
+        vo2: cur ? Number(cur.vo2_max) : null, vo2_change: cur && ago ? r1(Number(cur.vo2_max) - Number(ago.vo2_max)) : null,
+        hrv7: hl.weekly_avg_hrv_ms ?? null, hrv_status: hl.status ?? null,
+        sleep7: avg(s.map((r) => Number(r.sleep_hours))), score7: s.length ? Math.round(avg(s.map((r) => Number(r.sleep_score)))) : null,
+      }];
+    },
+  });
+
+  dash.calc('countdown', {
+    title: 'Race countdown',
+    description: 'Days from today to race day, and which training phase today falls in.',
+    inputs: ['race', 'phases'],
+    fn: (race, phases) => {
+      const r = race[0] || {};
+      const day = 864e5;
+      const now = new Date();
+      const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+      const t = (s) => Date.parse(String(s).slice(0, 10) + 'T00:00:00Z');
+      const days = Math.round((t(r.Date) - today) / day);
+      const ph = phases.find((p) => t(p.Start) <= today && today <= t(p.End));
+      return [{
+        race: r.Race ?? null, date: r.Date ?? null, days_to_go: days, weeks_to_go: Math.round((days / 7) * 10) / 10,
+        phase: ph ? ph.Phase : null, phase_week: ph ? Math.floor((today - t(ph.Start)) / day / 7) + 1 : null,
+        phase_colour: ph && ph.Colour ? ph.Colour : null, phase_end: ph ? ph.End : null,
+        phase_days_left: ph ? Math.round((t(ph.End) - today) / day) : null,
+        today: new Date(today).toISOString().slice(0, 10),
+      }];
+    },
+  });
+
+  dash.calc('phase_list', {
+    title: 'Season phases with status',
+    description: 'Each phase with its length in days (start and end included), whether it is done, current or planned as of today, and its focus; for the current phase, days done and days until its test day (the last day).',
+    inputs: ['phases'],
+    fn: (phases) => {
+      const day = 864e5;
+      const now = new Date();
+      const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+      const t = (s) => Date.parse(String(s).slice(0, 10) + 'T00:00:00Z');
+      return phases.slice().sort((a, b) => (a.Start < b.Start ? -1 : 1)).map((p) => {
+        const a = t(p.Start), b = t(p.End);
+        const status = b < today ? 'done' : a > today ? 'planned' : 'current';
+        return { phase: p.Phase, start: p.Start, end: p.End, days: Math.round((b - a) / day) + 1, status,
+          days_left: status === 'current' ? Math.round((b - today) / day) : null,
+          done_days: status === 'current' ? Math.round((today - a) / day) + 1 : null, colour: p.Colour || null, focus: p.Focus || null, label: p.Status || null };
+      });
+    },
+  });
+
+  dash.calc('split', {
+    title: 'Discipline split, 4 weeks',
+    description: 'Swim, bike and run hours over the latest four weeks and each one’s share of the three.',
+    inputs: ['weekly'],
+    fn: (weekly) => {
+      const w = weekly.slice(-4);
+      const tot = { Swim: 0, Bike: 0, Run: 0 };
+      for (const x of w) { tot.Swim += x.swim_h; tot.Bike += x.bike_h; tot.Run += x.run_h; }
+      const all = tot.Swim + tot.Bike + tot.Run;
+      return Object.entries(tot).map(([sport, h]) => ({ sport, hours: Math.round(h * 10) / 10, share: all ? Math.round((h / all) * 1000) / 1000 : 0 }));
+    },
+  });
+
+  dash.calc('recent', {
+    title: 'Latest 10 activities',
+    description: 'The ten newest Garmin activities, with distance in kilometres and time as hours:minutes:seconds.',
+    inputs: ['activities'],
+    fn: (activities) => activities.slice().sort((a, b) => (a.start_time < b.start_time ? 1 : -1)).slice(0, 10).map((r) => {
+      const s = Math.round(Number(r.duration_seconds) || 0);
+      const p = (n) => String(n).padStart(2, '0');
+      return { id: r.id, start_time: r.start_time, type: r.type, name: r.name, distance_km: Math.round((Number(r.distance_meters) || 0) / 10) / 100,
+        time: `${Math.floor(s / 3600)}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}`, avg_hr: r.avg_hr_bpm == null ? null : Math.round(r.avg_hr_bpm) };
+    }),
+  });
+
+  dash.calc('readiness', {
+    title: 'Longest session vs race distance',
+    description: 'Longest single swim, bike and run in the last 28 days, as a share of the T100 race distances.',
+    inputs: ['activities', 'race'],
+    fn: (activities, race) => {
+      const r = race[0] || {};
+      const now = new Date();
+      const from = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - 27 * 864e5;
+      const sport = (t) => { t = String(t || '').toLowerCase(); return t.includes('swim') ? 'Swim' : /cycl|bik|ride|spin/.test(t) ? 'Bike' : t.includes('run') ? 'Run' : null; };
+      const best = { Swim: null, Bike: null, Run: null };
+      for (const a of activities) {
+        const sp = sport(a.type); if (!sp) continue;
+        if (Date.parse(String(a.start_time).slice(0, 10) + 'T00:00:00Z') < from) continue;
+        const km = (Number(a.distance_meters) || 0) / 1000;
+        if (!best[sp] || km > best[sp].km) best[sp] = { km, date: String(a.start_time).slice(0, 10), name: a.name };
+      }
+      const target = { Swim: Number(r['Swim km']), Bike: Number(r['Bike km']), Run: Number(r['Run km']) };
+      return ['Swim', 'Bike', 'Run'].map((sp) => {
+        const km = best[sp] ? Math.round(best[sp].km * 10) / 10 : 0;
+        return { sport: sp, longest_km: km, race_km: target[sp], share: target[sp] ? Math.round((km / target[sp]) * 1000) / 1000 : null, date: best[sp] ? best[sp].date : null, name: best[sp] ? best[sp].name : null };
+      });
+    },
+  });
+
+  // ---------- heart and intensity loaders ----------
+  dash.loader('rhr', {
+    description: 'Garmin\u2019s resting heart rate for the stored day, then the 29 days before it, one call a day, as rows.',
+    fn: async ({ answer, call, args }) => {
+      const pick = (a) => { a = parsed(a); if (typeof a === 'string') throw new Error(a); const m = (((a || {}).allMetrics || {}).metricsMap || {}).WELLNESS_RESTING_HEART_RATE || []; return m.map((r) => ({ date: r.calendarDate, rhr: r.value == null ? null : Number(r.value) })); };
+      const rows = pick(answer);
+      const base = new Date(String(args.date) + 'T00:00:00Z');
+      for (let i = 1; i < 30; i++) {
+        const d = new Date(base); d.setUTCDate(d.getUTCDate() - i);
+        try { rows.push(...pick(await call('get_rhr_day', { date: d.toISOString().slice(0, 10) }))); } catch (e) { /* a day without a reading */ }
+      }
+      return { columns: ['date', 'rhr'], rows: rows.filter((r) => r.rhr != null).sort((a, b) => (a.date < b.date ? -1 : 1)) };
+    },
+  });
+  dash.loader('balance', {
+    description: 'Garmin\u2019s load focus bands as rows; when today has no reading yet, yesterday\u2019s.',
+    fn: async ({ answer, call, args }) => {
+      let a = parsed(answer);
+      if (typeof a === 'string' && /^no training load balance/i.test(a.trim())) {
+        const d = new Date(String(args.date) + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
+        a = parsed(await call('get_training_load_balance', { date: d.toISOString().slice(0, 10) }));
+      }
+      const cols = ['band', 'load', 'target_min', 'target_max', 'status', 'feedback', 'date'];
+      if (typeof a === 'string') { if (/^no training load balance/i.test(a.trim())) return { columns: cols, rows: [] }; throw new Error(a); }
+      const names = { aerobic_low: 'Aerobic low', aerobic_high: 'Aerobic high', anaerobic: 'Anaerobic' };
+      return { columns: cols, rows: Object.keys(names).filter((k) => a[k]).map((k) => ({ band: names[k], load: a[k].load, target_min: a[k].target_min, target_max: a[k].target_max, status: a[k].status, feedback: a.feedback ?? null, date: a.date ?? null })) };
+    },
+  });
+  dash.loader('load', {
+    description: 'Garmin\u2019s daily acute and chronic training load as rows.',
+    fn: ({ answer }) => {
+      const a = parsed(answer);
+      if (typeof a === 'string') throw new Error(a);
+      const cols = ['date', 'atl', 'ctl', 'acwr', 'acwr_status', 'training_status', 'opt_min', 'opt_max'];
+      return { columns: cols, rows: (a.trend || []).map((r) => ({ date: r.date, atl: r.atl, ctl: r.ctl, acwr: r.acwr, acwr_status: r.acwr_status, training_status: r.training_status, opt_min: r.optimal_chronic_load_min, opt_max: r.optimal_chronic_load_max })) };
+    },
+  });
+  dash.loader('effect', {
+    description: 'Your latest 15 Garmin activities, each with its aerobic and anaerobic training effect from a call per activity.',
+    fn: async ({ answer, call }) => {
+      const a = parsed(answer);
+      if (typeof a === 'string') throw new Error(a);
+      const list = (a.activities || []).filter((r) => (Number(r.duration_seconds) || 0) > 0);
+      const rows = [];
+      for (const r of list) {
+        let te = {};
+        try { te = parsed(await call('get_training_effect', { activity_id: Number(r.id) })) || {}; } catch (e) { te = {}; }
+        if (typeof te === 'string') te = {};
+        rows.push({ id: String(r.id), start_time: r.start_time, type: r.type, name: r.name,
+          aerobic: te.aerobic_effect == null ? null : Math.round(te.aerobic_effect * 10) / 10,
+          anaerobic: te.anaerobic_effect == null ? null : Math.round(te.anaerobic_effect * 10) / 10,
+          label: te.training_effect_label ?? null, load: te.training_load == null ? null : Math.round(te.training_load) });
+      }
+      return { columns: ['id', 'start_time', 'type', 'name', 'aerobic', 'anaerobic', 'label', 'load'], rows };
+    },
+  });
+
+  dash.calc('rhr_summary', {
+    title: 'Resting HR headline',
+    description: 'Latest resting heart rate and its change from 30 days earlier.',
+    inputs: ['rhr'],
+    fn: (rhr) => {
+      const r = rhr.slice().sort((a, b) => (a.date < b.date ? -1 : 1)).filter((x) => x.rhr != null);
+      const cur = r[r.length - 1], first = r[0];
+      return [{ rhr: cur ? cur.rhr : null, rhr_change: cur && first ? cur.rhr - first.rhr : null }];
+    },
+  });
+
+  dash.calc('heart_summary', {
+    title: 'Heart and load headline figures',
+    description: 'Latest resting HR against 30 days earlier and its 30-day average, Garmin\u2019s latest training status and load ratio, and its load focus feedback.',
+    inputs: ['rhr', 'load', 'balance'],
+    fn: (rhr, load, balance) => {
+      const r = rhr.slice().sort((a, b) => (a.date < b.date ? -1 : 1)).filter((x) => x.rhr != null);
+      const cur = r[r.length - 1], first = r[0];
+      const vals = r.map((x) => x.rhr);
+      const l = load.slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+      const ll = l[l.length - 1] || {};
+      const b = balance[0] || {};
+      return [{
+        rhr: cur ? cur.rhr : null, rhr_change: cur && first ? cur.rhr - first.rhr : null,
+        rhr_avg: vals.length ? Math.round((vals.reduce((x, y) => x + y, 0) / vals.length) * 10) / 10 : null,
+        rhr_min: vals.length ? Math.min(...vals) : null,
+        status: ll.training_status ?? null, acwr: ll.acwr ?? null, acwr_status: ll.acwr_status ?? null,
+        focus: b.feedback ?? null,
+      }];
+    },
+  });
+
+  // ---------- devices and FTP ----------
+  dash.loader('ftp_garmin', {
+    description: 'Garmin\u2019s latest cycling FTP estimate as one row.',
+    fn: ({ answer }) => {
+      const a = parsed(answer);
+      const cols = ['date', 'ftp', 'stale'];
+      if (typeof a === 'string') { if (/^no /i.test(a.trim())) return { columns: cols, rows: [] }; throw new Error(a); }
+      if (!a || a.functional_threshold_power_watts == null) return { columns: cols, rows: [] };
+      return { columns: cols, rows: [{ date: String(a.calendar_date || '').slice(0, 10), ftp: Number(a.functional_threshold_power_watts), stale: !!a.is_stale }] };
+    },
+  });
+  dash.loader('devices', {
+    description: 'Garmin\u2019s list of devices on your account as rows.',
+    fn: ({ answer }) => {
+      const a = parsed(answer);
+      if (typeof a === 'string') throw new Error(a);
+      const list = Array.isArray(a) ? a : a.devices || [];
+      return { columns: ['device_id', 'device_name', 'model'], rows: list.map((d) => ({ device_id: String(d.device_id ?? d.deviceId ?? ''), device_name: d.device_name ?? d.productDisplayName ?? '', model: d.model ?? '' })) };
+    },
+  });
+  dash.calc('ftp_history', {
+    title: 'FTP results over time',
+    description: 'Your logged FTP tests with watts per kilogram where a weight was given, plus Garmin\u2019s latest estimate, oldest first.',
+    inputs: ['ftp_tests', 'ftp_garmin'],
+    fn: (ftp_tests, ftp_garmin) => {
+      const rows = ftp_tests.filter((r) => r.Date && r['FTP (W)'] !== '' && r['FTP (W)'] != null).map((r, i) => {
+        const f = Number(r['FTP (W)']), kg = Number(r['Weight (kg)']);
+        return { key: `t${i}-${r.Date}`, date: String(r.Date).slice(0, 10), ftp: f, wkg: kg > 0 ? Math.round((f / kg) * 100) / 100 : null, source: r.Source || 'Test', notes: r.Notes || '', kind: 'test', stale: false };
+      });
+      for (const g of ftp_garmin) rows.push({ key: `garmin-${g.date}`, date: g.date, ftp: g.ftp, wkg: null, source: 'Garmin estimate', notes: g.stale ? 'Not updated recently' : '', kind: 'garmin', stale: g.stale });
+      return rows.sort((a, b) => (a.date < b.date ? -1 : 1));
+    },
+  });
+  dash.calc('device_summary', {
+    title: 'Devices and FTP headline',
+    description: 'Your latest FTP (a logged test where there is one, otherwise Garmin\u2019s estimate), its watts per kilogram, and how many tests and device readings are logged.',
+    inputs: ['ftp_history', 'device_log'],
+    fn: (ftp_history, device_log) => {
+      const tests = ftp_history.filter((r) => r.kind === 'test');
+      const pick = tests.length ? tests[tests.length - 1] : ftp_history[ftp_history.length - 1];
+      const withKg = tests.filter((r) => r.wkg != null);
+      const dates = device_log.map((r) => String(r.Date || '').slice(0, 10)).filter(Boolean).sort();
+      return [{ ftp: pick ? pick.ftp : null, ftp_source: pick ? pick.source : null, ftp_date: pick ? pick.date : null,
+        wkg: withKg.length ? withKg[withKg.length - 1].wkg : null, tests: tests.length, entries: device_log.length, last_date: dates.length ? dates[dates.length - 1] : null }];
+    },
+  });
+
+  // ---------- helpers ----------
+  const C = () => ['#0181d1', '#00bf6f', '#d84d04', '#faad00', ...dash.colors.slice(4)]; // Horizon Climbing palette: swim blue, bike green, run orange, accent yellow
+  const muted = 'var(--cds-chart-muted)';
+  const sportColor = (t) => { t = String(t || '').toLowerCase(); return t.includes('swim') ? C()[0] : /cycl|bik|ride|spin/.test(t) ? C()[1] : t.includes('run') ? C()[2] : muted; };
+  const typeName = (t) => ({ lap_swimming: 'Pool swim', open_water_swimming: 'Open-water swim', swimming: 'Swim', running: 'Run', treadmill_running: 'Treadmill run', trail_running: 'Trail run', cycling: 'Ride', indoor_cycling: 'Indoor ride', virtual_ride: 'Virtual ride', road_biking: 'Road ride', indoor_cardio: 'Cardio', tennis_v2: 'Tennis', strength_training: 'Strength', multi_sport: 'Multisport' }[t] || String(t || '').replace(/_v\d+$/, '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()));
+  const fmtDay = d3.utcFormat('%a %-d %b');
+  const fmtShort = d3.utcFormat('%-d %b');
+  const fmtLong = d3.utcFormat('%-d %B %Y');
+  const parse = (s) => new Date(String(s).slice(0, 10) + 'T00:00:00Z');
+  const one = (id) => { const q = dash.data(id); return q.status === 'ok' ? (q.data[0] || null) : null; };
+
+  document.querySelectorAll('.tx .sw').forEach((el) => { el.style.background = el.dataset.i === 'muted' ? muted : C()[+el.dataset.i]; });
+
+  const failed = (el, ids) => {
+    const bad = ids.some((id) => dash.data(id).status === 'error');
+    el.replaceChildren();
+    if (bad) { el.classList.remove('dash-skeleton'); const f = document.createElement('div'); f.className = 'tx-fail'; f.textContent = 'Failed to load'; el.append(f); }
+    else el.classList.add('dash-skeleton');
+  };
+  const ready = (ids) => ids.every((id) => dash.data(id).status === 'ok');
+  const tip = (el) => { const t = document.createElement('div'); t.className = 'tx-tip'; t.hidden = true; el.append(t); return t; };
+  const place = (t, el, x, y) => {
+    t.hidden = false;
+    const w = t.offsetWidth, h = t.offsetHeight, W = el.clientWidth;
+    let left = x + 12; if (left + w > W) left = x - w - 12; if (left < 0) left = 0;
+    t.style.left = left + 'px'; t.style.top = Math.max(0, y - h - 8) + 'px';
+  };
+  const tipRow = (t, label, value, color) => {
+    const r = document.createElement('div'); r.className = 'r';
+    if (color) { const i = document.createElement('i'); i.style.background = color; r.append(i); }
+    const s = document.createElement('span'); s.textContent = label ? `${label}: ${value}` : value; r.append(s); t.append(r);
+  };
+  const tipHead = (t, text) => { t.replaceChildren(); const d = document.createElement('div'); d.className = 'd'; d.textContent = text; t.append(d); };
+  const axisClean = (g) => { g.attr('font-size', null).attr('font-family', null); g.selectAll('text').style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)'); g.selectAll('line').style('stroke', 'var(--cds-chart-axis)'); g.select('.domain').remove(); };
+  const cap = (svg, x, y, text, anchor) => svg.append('text').attr('x', x).attr('y', y).attr('text-anchor', anchor || 'start').text(text).style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
+
+  // empty-plan note shows and hides from outside the drawing
+  dash.onData(() => {
+    const q = dash.data('plan');
+    const empty = q.status === 'ok' && q.data.length === 0;
+    document.querySelectorAll('.tx-empty').forEach((el) => { el.hidden = !empty; });
+  });
+
+  // ---------- single values ----------
+  const value = (name, id, field, fmt) => dash.draw(name, (el) => {
+    const r = one(id);
+    const v = r ? r[field] : null;
+    el.classList.remove('tx-good', 'tx-bad');
+    el.textContent = v == null || v === '' ? '—' : fmt ? fmt(v, el) : String(v);
+  });
+  const signed = (better) => (v, el) => { if (v === 0) return '0'; el.classList.add((v > 0) === (better === 'up') ? 'tx-good' : 'tx-bad'); return (v > 0 ? '+' : '−') + Math.abs(v); };
+  value('race-name', 'countdown', 'race');
+  value('race-date', 'countdown', 'date', (v) => fmtLong(parse(v)));
+  value('days', 'countdown', 'days_to_go', (v) => d3.format(',')(v));
+  value('weeks', 'countdown', 'weeks_to_go');
+  dash.draw('phase', (el) => { const r = one('countdown'); el.textContent = r && r.phase ? r.phase : '—'; el.style.color = r && r.phase ? (phaseCode(r.phase, r.phase_colour) || '') : ''; });
+  value('phase-week', 'countdown', 'phase_week');
+  dash.draw('phase-test', (el) => { const r = one('countdown'); el.textContent = r && r.phase_days_left != null ? testText(r.phase_days_left) : '—'; });
+  value('week-h', 'summary', 'week_h');
+  value('t-week', 'summary', 'week_h');
+  value('t-sessions', 'summary', 'sessions');
+  value('t-avg', 'summary', 'avg4_h');
+  value('avg-h', 'summary', 'avg4_h');
+  value('vo2', 'summary', 'vo2');
+  value('vo2-ch', 'summary', 'vo2_change', signed('up'));
+  value('hrv', 'summary', 'hrv7');
+  value('hrv-status', 'summary', 'hrv_status', (v, el) => { if (v === 'BALANCED') el.classList.add('tx-good'); else if (v === 'LOW' || v === 'POOR') el.classList.add('tx-bad'); return String(v).charAt(0) + String(v).slice(1).toLowerCase(); });
+  value('sleep', 'summary', 'sleep7');
+  value('sleep-score', 'summary', 'score7');
+
+  // ---------- race-distance readiness ----------
+  dash.draw('readiness', (el) => {
+    if (!ready(['readiness'])) return failed(el, ['readiness']);
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const rows = dash.data('readiness').data;
+    const color = { Swim: C()[0], Bike: C()[1], Run: C()[2] };
+    const W = Math.max(260, el.clientWidth), rowH = 42, H = rows.length * rowH + 4;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Longest session against race distance');
+    const lab = svg.append('g').selectAll('text').data(rows).join('text').attr('x', 0).attr('y', (_, i) => i * rowH + 24).text((r) => r.sport).style('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
+    let lw = 0; lab.each(function () { lw = Math.max(lw, this.getComputedTextLength()); });
+    const txt = (r) => `${d3.format(',.1f')(r.longest_km)} of ${r.race_km} km · ${r.share == null ? '' : d3.format('.0%')(r.share)}`;
+    const val = svg.append('g').selectAll('text').data(rows).join('text').attr('x', W).attr('y', (_, i) => i * rowH + 24).attr('text-anchor', 'end').text(txt)
+      .style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').style('font-variant-numeric', 'tabular-nums');
+    let vw = 0; val.each(function () { vw = Math.max(vw, this.getComputedTextLength()); });
+    const x0 = lw + 12, x1 = Math.max(x0 + 40, W - vw - 16);
+    rows.forEach((r, i) => {
+      const max = Math.max(r.race_km || 1, r.longest_km) * 1.05;
+      const x = d3.scaleLinear([0, max], [x0, x1]);
+      const yy = i * rowH + 10;
+      svg.append('rect').attr('x', x0).attr('y', yy).attr('width', x1 - x0).attr('height', 20).attr('rx', 0).style('fill', 'var(--cds-chart-muted)').attr('fill-opacity', 0.25);
+      svg.append('rect').attr('x', x0).attr('y', yy).attr('width', Math.max(2, x(r.longest_km) - x0)).attr('height', 20).attr('rx', 0).style('fill', color[r.sport]);
+      svg.append('line').attr('x1', x(r.race_km)).attr('x2', x(r.race_km)).attr('y1', yy - 4).attr('y2', yy + 24).style('stroke', 'var(--color-fg)').attr('stroke-width', 2);
+    });
+    cap(svg, x1, H - 1, 'Line = race distance', 'end').remove();
+  });
+
+  // ---------- season timeline ----------
+  const dur = (n) => { const w = Math.floor(n / 7), d = n % 7; return [w ? `${w} week${w > 1 ? 's' : ''}` : '', d ? `${d} day${d > 1 ? 's' : ''}` : ''].filter(Boolean).join(' '); };
+  const testText = (n) => (n == null ? '—' : n === 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`);
+  // Phase colour code: the first rule whose words appear in a phase's name sets its colour.
+  const PHASE_CODES = [
+    { k: 'mock', words: /mock|t100 race|race sim/i, colour: '#5c3d8f' },
+    { k: 'power-endurance', words: /power[\s-]*endurance/i, colour: '#faad00' },
+    { k: 'strength', words: /strength/i, colour: '#ca426e' },
+    { k: 'power', words: /power/i, colour: '#d84d04' },
+    { k: 'endurance', words: /endurance/i, colour: '#00bf6f' },
+    { k: 'capacity', words: /capacity/i, colour: '#0181d1' },
+  ];
+  const phaseCode = (name, fallback) => { const c = PHASE_CODES.find((r) => r.words.test(String(name || ''))); return c ? c.colour : fallback || null; };
+  document.querySelectorAll('.tx .pk').forEach((el) => { const c = PHASE_CODES.find((r) => r.k === el.dataset.k); if (c) el.style.background = c.colour; });
+  const phaseFill = (p) => phaseCode(p.phase, p.colour) || (p.status === 'current' ? C()[0] : p.status === 'done' ? 'var(--color-fg-muted)' : 'var(--cds-chart-muted)');
+  let pickedPhase = null;
+  let phaseScrolled = false;
+  const range = (p) => `${fmtShort(parse(p.start))} – ${fmtShort(parse(p.end))} ${d3.utcFormat('%Y')(parse(p.end))}`;
+  const statusText = (p) => (p.status === 'current' ? `Now · test day ${testText(p.days_left)}` : p.status === 'done' ? 'Done' : p.label || 'Planned');
+  dash.draw('phase-cards', (el) => {
+    if (!ready(['phase_list', 'countdown'])) return failed(el, ['phase_list', 'countdown']);
+    const keepScroll = el.scrollLeft;
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const rows = dash.data('phase_list').data;
+    if (!pickedPhase || !rows.some((p) => p.start === pickedPhase)) { const c = rows.find((p) => p.status === 'current'); pickedPhase = c ? c.start : rows[0] && rows[0].start; }
+    rows.forEach((p) => {
+      const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'listitem');
+      b.className = 'tx-ph ' + (p.status === 'current' ? 'cur' : p.status === 'done' ? 'done' : 'planned');
+      const code = phaseCode(p.phase, p.colour);
+      if (p.status === 'current') { b.style.background = code || C()[0]; if (code === '#faad00') b.style.color = '#183029'; }
+      else if (code) b.style.borderLeftColor = code;
+      b.setAttribute('aria-pressed', String(p.start === pickedPhase));
+      const n = document.createElement('span'); n.className = 'n'; n.textContent = p.phase;
+      const m = document.createElement('span'); m.className = 'm'; m.textContent = `${range(p)} · ${dur(p.days)}`;
+      b.append(n, m);
+      if (p.status === 'current' && p.days) { const bar = document.createElement('span'); bar.className = 'bar'; const f = document.createElement('i'); f.style.width = `${Math.min(100, Math.round((p.done_days / p.days) * 100))}%`; bar.append(f); b.append(bar); }
+      const st = document.createElement('span'); st.className = 's'; st.textContent = statusText(p); b.append(st);
+      b.addEventListener('click', () => { pickedPhase = p.start; el.querySelectorAll('.tx-ph[aria-pressed]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); dash.draw('phase-detail'); });
+      el.append(b);
+    });
+    const cd = one('countdown');
+    if (cd && cd.date) {
+      const r = document.createElement('div'); r.className = 'tx-ph race'; r.setAttribute('role', 'listitem');
+      const n = document.createElement('span'); n.className = 'n'; n.textContent = 'Race day';
+      const m = document.createElement('span'); m.className = 'm'; m.textContent = `${fmtShort(parse(cd.date))} ${d3.utcFormat('%Y')(parse(cd.date))} · ${cd.race || ''}`;
+      const st = document.createElement('span'); st.className = 's'; st.textContent = `${d3.format(',')(cd.days_to_go)} days to go`;
+      r.append(n, m, st); el.append(r);
+    }
+    const cur = el.querySelector('.tx-ph.cur');
+    if (!phaseScrolled && cur && el.scrollWidth > el.clientWidth) { el.scrollLeft = Math.max(0, cur.offsetLeft - el.offsetLeft - 8); phaseScrolled = true; }
+    else if (phaseScrolled) el.scrollLeft = keepScroll;
+  });
+  dash.draw('phase-detail', (el) => {
+    el.replaceChildren();
+    const q = dash.data('phase_list'); if (q.status !== 'ok') return;
+    const p = q.data.find((r) => r.start === pickedPhase) || q.data.find((r) => r.status === 'current') || q.data[0];
+    if (!p) return;
+    const h = document.createElement('h3'); const i = document.createElement('i'); i.style.background = phaseFill(p); h.append(i, document.createTextNode(p.phase));
+    const m = document.createElement('p'); m.className = 'm'; m.textContent = `${range(p)} · ${dur(p.days)} · ${statusText(p)}`;
+    const d = document.createElement('p'); d.textContent = p.focus || 'No description yet.';
+    el.append(h, m, d);
+  });
+
+  // ---------- weekly stacked bars ----------
+  dash.draw('weekly', (el) => {
+    if (!ready(['weekly'])) return failed(el, ['weekly']);
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const rows = dash.data('weekly').data.slice(-16);
+    if (!rows.length) return;
+    const keys = [['swim_h', 'Swim', C()[0]], ['bike_h', 'Bike', C()[1]], ['run_h', 'Run', C()[2]], ['other_h', 'Other', muted]];
+    const W = Math.max(280, el.clientWidth), H = 220, m = { t: 8, r: 4, b: 24, l: 0 };
+    const y = d3.scaleLinear([0, (d3.max(rows, (r) => r.total_h) || 1) * 1.08], [H - m.b, m.t]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Weekly training hours by discipline');
+    const yg = svg.append('g').call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(4));
+    axisClean(yg);
+    let wl = 0; yg.selectAll('text').each(function () { wl = Math.max(wl, this.getComputedTextLength()); });
+    m.l = wl + 10; yg.attr('transform', `translate(${m.l},0)`);
+    svg.insert('g', ':first-child').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--cds-chart-grid)');
+    const x = d3.scaleBand(rows.map((r) => r.week), [m.l, W - m.r]).padding(0.28);
+    const bw = Math.min(32, x.bandwidth()), bx = (w) => x(w) + (x.bandwidth() - bw) / 2;
+    d3.stack().keys(keys.map((k) => k[0]))(rows).forEach((s, i) => svg.append('g').selectAll('rect').data(s).join('rect')
+      .attr('x', (d) => bx(d.data.week)).attr('width', bw)
+      .attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1]))).style('fill', keys[i][2]).attr('class', 'bar'));
+    const step = Math.ceil(rows.length / Math.max(2, Math.floor((W - m.l) / 70)));
+    rows.forEach((r, i) => { if ((rows.length - 1 - i) % step === 0) cap(svg, x(r.week) + x.bandwidth() / 2, H - 6, fmtShort(parse(r.week)), 'middle'); });
+    const t = tip(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.b - m.t).attr('fill', 'transparent')
+      .on('pointermove', (ev, r) => {
+        svg.selectAll('rect.bar').attr('opacity', (d) => (d.data.week === r.week ? 1 : 0.45));
+        tipHead(t, `Week of ${fmtShort(parse(r.week))} · ${r.total_h} h, ${r.sessions} sessions`);
+        keys.forEach(([k, n, c]) => { if (r[k]) tipRow(t, n, `${r[k]} h`, c); });
+        const [px, py] = d3.pointer(ev, el); place(t, el, px, py);
+      })
+      .on('pointerleave', () => { svg.selectAll('rect.bar').attr('opacity', 1); t.hidden = true; });
+  });
+
+  // ---------- split ----------
+  dash.draw('split', (el) => {
+    if (!ready(['split'])) return failed(el, ['split']);
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const rows = dash.data('split').data;
+    const color = { Swim: C()[0], Bike: C()[1], Run: C()[2] };
+    const W = Math.max(240, el.clientWidth), rowH = 34, H = rows.length * rowH + 4;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Discipline split');
+    const lab = svg.append('g').selectAll('text').data(rows).join('text').attr('x', 0).attr('y', (_, i) => i * rowH + 21).text((r) => r.sport).style('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
+    let lw = 0; lab.each(function () { lw = Math.max(lw, this.getComputedTextLength()); });
+    const val = svg.append('g').selectAll('text').data(rows).join('text').attr('x', W).attr('y', (_, i) => i * rowH + 21).attr('text-anchor', 'end')
+      .text((r) => `${d3.format('.0%')(r.share)} · ${r.hours} h`).style('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)').style('font-variant-numeric', 'tabular-nums');
+    let vw = 0; val.each(function () { vw = Math.max(vw, this.getComputedTextLength()); });
+    const x = d3.scaleLinear([0, Math.max(0.01, d3.max(rows, (r) => r.share))], [0, Math.max(20, W - lw - vw - 24)]);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', lw + 10).attr('y', (_, i) => i * rowH + 7).attr('height', 20).attr('rx', 0)
+      .attr('width', (r) => Math.max(2, x(r.share))).style('fill', (r) => color[r.sport] || muted);
+  });
+
+  // ---------- small bar charts: distance ----------
+  dash.draw('dist', (el) => {
+    if (!ready(['weekly'])) return failed(el, ['weekly']);
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const k = el.dataset.metric, col = C()[+el.dataset.color];
+    const rows = dash.data('weekly').data.slice(-16);
+    if (!rows.length) return;
+    const W = Math.max(200, el.clientWidth), H = 120, m = { t: 18, r: 2, b: 18, l: 2 };
+    const x = d3.scaleBand(rows.map((r) => r.week), [m.l, W - m.r]).padding(0.25);
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => r[k]) || 1], [H - m.b, m.t]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', k);
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', H - m.b).attr('y2', H - m.b).style('stroke', 'var(--cds-chart-axis)');
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week)).attr('width', x.bandwidth()).attr('y', (r) => y(r[k])).attr('height', (r) => Math.max(0, H - m.b - y(r[k]))).attr('rx', 0)
+      .attr('fill', col).attr('fill-opacity', (_, i) => (i === rows.length - 1 ? 0.5 : 1));
+    const last = rows.length > 1 ? rows[rows.length - 2] : rows[0];
+    cap(svg, W - m.r, 11, `Last full week ${d3.format(',.1f')(last[k])}`, 'end');
+    cap(svg, m.l, H - 3, fmtShort(parse(rows[0].week)));
+    cap(svg, W - m.r, H - 3, fmtShort(parse(rows[rows.length - 1].week)), 'end');
+    const t = tip(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.week) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.b - m.t).attr('fill', 'transparent')
+      .on('pointermove', (ev, r) => { tipHead(t, `Week of ${fmtShort(parse(r.week))}`); tipRow(t, '', `${d3.format(',.1f')(r[k])} km`); const [px, py] = d3.pointer(ev, el); place(t, el, px, py); })
+      .on('pointerleave', () => { t.hidden = true; });
+  });
+
+  // ---------- small line charts: health ----------
+  dash.draw('trend', (el) => {
+    const ds = el.dataset.ds;
+    if (!ready([ds])) return failed(el, [ds]);
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const k = el.dataset.metric;
+    const pts = dash.data(ds).data.map((r) => ({ d: parse(r.date), v: r[k] == null || r[k] === '' ? NaN : Number(r[k]) })).filter((p) => !isNaN(p.d) && !isNaN(p.v)).sort((a, b) => a.d - b.d);
+    if (pts.length < 2) return;
+    const W = Math.max(200, el.clientWidth), H = el.dataset.tall ? 220 : 120, m = { t: 18, r: 4, b: 18, l: 4 };
+    const ext = d3.extent(pts, (p) => p.v); const pad = (ext[1] - ext[0]) * 0.15 || 1;
+    const x = d3.scaleUtc(d3.extent(pts, (p) => p.d), [m.l, W - m.r]);
+    const y = d3.scaleLinear([ext[0] - pad, ext[1] + pad], [H - m.b, m.t]);
+    const fmt = (v) => d3.format(',')(Math.round(v * 10) / 10);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', k);
+    svg.append('path').datum(pts).attr('d', d3.line((p) => x(p.d), (p) => y(p.v))).attr('fill', 'none').attr('stroke', C()[0]).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+    const lp = pts[pts.length - 1];
+    svg.append('circle').attr('cx', x(lp.d)).attr('cy', y(lp.v)).attr('r', 3).attr('fill', C()[0]);
+    cap(svg, W - m.r, 11, `Latest ${fmt(lp.v)}`, 'end');
+    cap(svg, m.l, H - 3, fmtShort(pts[0].d));
+    cap(svg, W - m.r, H - 3, fmtShort(lp.d), 'end');
+    const t = tip(el);
+    const dot = svg.append('circle').attr('r', 4).attr('fill', C()[0]).attr('opacity', 0);
+    const bis = d3.bisector((p) => p.d).center;
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => { const [sx] = d3.pointer(ev); const p = pts[bis(pts, x.invert(sx))]; dot.attr('cx', x(p.d)).attr('cy', y(p.v)).attr('opacity', 1); tipHead(t, fmtDay(p.d)); tipRow(t, '', fmt(p.v)); const [px, py] = d3.pointer(ev, el); place(t, el, px, py); })
+      .on('pointerleave', () => { dot.attr('opacity', 0); t.hidden = true; });
+  });
+
+  // ---------- tables ----------
+  const cell = (tr, text, cls, color) => {
+    const td = document.createElement('td'); if (cls) td.className = cls;
+    if (color) { const s = document.createElement('span'); s.className = 'pill'; const i = document.createElement('i'); i.style.background = color; s.append(i, document.createTextNode(text)); td.append(s); } else td.textContent = text;
+    tr.append(td);
+  };
+  dash.draw('plan-body', (el) => {
+    el.replaceChildren();
+    const q = dash.data('plan'); if (q.status !== 'ok') return;
+    q.data.slice().sort((a, b) => (a.date < b.date ? -1 : 1)).forEach((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.key;
+      cell(tr, r.date ? fmtDay(parse(r.date)) : ''); cell(tr, typeName(r.sport), '', sportColor(r.sport)); cell(tr, r.name);
+      el.append(tr);
+    });
+  });
+  dash.draw('recent-body', (el) => {
+    el.replaceChildren();
+    const q = dash.data('recent'); if (q.status !== 'ok') return;
+    q.data.forEach((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.id;
+      cell(tr, fmtShort(parse(r.start_time))); cell(tr, typeName(r.type), '', sportColor(r.type)); cell(tr, r.name, 'hide-narrow');
+      cell(tr, r.distance_km ? d3.format(',.2f')(r.distance_km) : '', 'num'); cell(tr, r.time, 'num'); cell(tr, r.avg_hr == null ? '' : String(r.avg_hr), 'num hide-narrow');
+      el.append(tr);
+    });
+  });
+  // ---------- light / dark mode ----------
+  const setMode = (darkOn) => {
+    document.querySelectorAll('.tx').forEach((el) => el.classList.toggle('tx-dark', darkOn));
+    document.querySelectorAll('.tx-mode').forEach((b) => b.setAttribute('aria-pressed', String(darkOn)));
+    document.querySelectorAll('.tx-mode .to-dark').forEach((el) => { el.hidden = darkOn; });
+    document.querySelectorAll('.tx-mode .to-light').forEach((el) => { el.hidden = !darkOn; });
+  };
+  let darkNow = false;
+  try { darkNow = window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { darkNow = false; }
+  setMode(darkNow);
+  document.querySelectorAll('.tx-mode').forEach((b) => b.addEventListener('click', () => { darkNow = !darkNow; setMode(darkNow); }));
+
+  // ---------- tabs ----------
+  const showTab = (name) => {
+    const tabs = [...document.querySelectorAll('.tx-tab')];
+    if (!tabs.some((t) => t.dataset.tab === name)) name = 'overview';
+    tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+    document.querySelectorAll('.tx-page').forEach((p) => { p.hidden = p.id !== 'page-' + name; });
+    dash.setLink(name);
+  };
+  document.querySelectorAll('.tx-tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+  if (['heart', 'devices', 'settings'].includes(location.hash.slice(1))) showTab(location.hash.slice(1));
+
+  const nice = (v) => String(v).replace(/_\d+$/, '').replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase());
+  value('o-rhr', 'rhr_summary', 'rhr');
+  value('o-rhr-ch', 'rhr_summary', 'rhr_change', signed('down'));
+  value('h-rhr', 'heart_summary', 'rhr');
+  value('h-rhr-ch', 'heart_summary', 'rhr_change', signed('down'));
+  value('h-rhr-avg', 'heart_summary', 'rhr_avg');
+  value('h-rhr-min', 'heart_summary', 'rhr_min');
+  value('h-status', 'heart_summary', 'status', (v) => nice(v));
+  value('h-acwr', 'heart_summary', 'acwr');
+  value('h-acwr-st', 'heart_summary', 'acwr_status', (v) => nice(v));
+  value('h-focus', 'heart_summary', 'focus', (v) => ({ AEROBIC_HIGH_SHORTAGE: 'Short on high aerobic', AEROBIC_LOW_SHORTAGE: 'Short on low aerobic', ANAEROBIC_SHORTAGE: 'Short on anaerobic', BALANCED: 'Balanced' }[v] || nice(v)));
+
+  // ---------- load focus ----------
+  dash.draw('focus', (el) => {
+    if (!ready(['balance'])) return failed(el, ['balance']);
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const rows = dash.data('balance').data;
+    if (!rows.length) return;
+    const col = { 'Aerobic low': C()[0], 'Aerobic high': C()[1], Anaerobic: C()[2] };
+    const W = Math.max(240, el.clientWidth), rowH = 44, H = rows.length * rowH + 22;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Load focus against target ranges');
+    const lab = svg.append('g').selectAll('text').data(rows).join('text').attr('x', 0).attr('y', (_, i) => i * rowH + 24).text((r) => r.band).style('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
+    let lw = 0; lab.each(function () { lw = Math.max(lw, this.getComputedTextLength()); });
+    const val = svg.append('g').selectAll('text').data(rows).join('text').attr('x', W).attr('y', (_, i) => i * rowH + 24).attr('text-anchor', 'end')
+      .text((r) => `${d3.format(',')(Math.round(r.load))} · ${r.status === 'below' ? 'below target' : r.status === 'above' ? 'above target' : 'in range'}`)
+      .style('fill', (r) => (r.status === 'within' ? 'var(--color-fg-muted)' : 'var(--color-warn)')).style('font-size', 'var(--cds-font-size-caption)').style('font-variant-numeric', 'tabular-nums');
+    let vw = 0; val.each(function () { vw = Math.max(vw, this.getComputedTextLength()); });
+    const x0 = lw + 12, x1 = Math.max(x0 + 40, W - vw - 16);
+    const x = d3.scaleLinear([0, d3.max(rows, (r) => Math.max(r.load, r.target_max)) * 1.05], [x0, x1]);
+    rows.forEach((r, i) => {
+      const yy = i * rowH + 10;
+      svg.append('rect').attr('x', x(r.target_min)).attr('y', yy - 4).attr('width', Math.max(2, x(r.target_max) - x(r.target_min))).attr('height', 28).attr('rx', 0).style('fill', 'var(--cds-chart-muted)').attr('fill-opacity', 0.3);
+      svg.append('rect').attr('x', x0).attr('y', yy + 2).attr('width', Math.max(2, x(r.load) - x0)).attr('height', 16).attr('rx', 0).style('fill', col[r.band] || muted);
+    });
+    const b = rows[0];
+    if (b && b.date) cap(svg, x0, H - 2, `Garmin reading for ${fmtShort(parse(b.date))}`);
+  });
+
+  // ---------- acute and chronic load ----------
+  dash.draw('load', (el) => {
+    if (!ready(['load'])) return failed(el, ['load']);
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const pts = dash.data('load').data.map((r) => ({ d: parse(r.date), atl: Number(r.atl), ctl: Number(r.ctl), lo: Number(r.opt_min), hi: Number(r.opt_max), st: r.acwr_status })).filter((p) => !isNaN(p.d)).sort((a, b) => a.d - b.d);
+    if (pts.length < 2) return;
+    const W = Math.max(260, el.clientWidth), H = 220, m = { t: 10, r: 6, b: 22, l: 0 };
+    const y = d3.scaleLinear([0, d3.max(pts, (p) => Math.max(p.atl, p.ctl, p.hi)) * 1.05], [H - m.b, m.t]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Acute and chronic training load');
+    const yg = svg.append('g').call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(4)); axisClean(yg);
+    let wl = 0; yg.selectAll('text').each(function () { wl = Math.max(wl, this.getComputedTextLength()); });
+    m.l = wl + 10; yg.attr('transform', `translate(${m.l},0)`);
+    const x = d3.scaleUtc(d3.extent(pts, (p) => p.d), [m.l, W - m.r]);
+    svg.insert('g', ':first-child').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--cds-chart-grid)');
+    svg.append('path').datum(pts).attr('d', d3.area((p) => x(p.d), (p) => y(p.lo), (p) => y(p.hi))).style('fill', 'var(--cds-chart-muted)').attr('fill-opacity', 0.2);
+    svg.append('path').datum(pts).attr('d', d3.line((p) => x(p.d), (p) => y(p.ctl))).attr('fill', 'none').style('stroke', muted).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+    svg.append('path').datum(pts).attr('d', d3.line((p) => x(p.d), (p) => y(p.atl))).attr('fill', 'none').style('stroke', C()[0]).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+    cap(svg, m.l, H - 4, fmtShort(pts[0].d));
+    cap(svg, W - m.r, H - 4, fmtShort(pts[pts.length - 1].d), 'end');
+    const t = tip(el);
+    const dot = svg.append('circle').attr('r', 4).style('fill', C()[0]).attr('opacity', 0);
+    const bis = d3.bisector((p) => p.d).center;
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => { const [sx] = d3.pointer(ev); const p = pts[bis(pts, x.invert(sx))]; dot.attr('cx', x(p.d)).attr('cy', y(p.atl)).attr('opacity', 1); tipHead(t, fmtDay(p.d)); tipRow(t, 'Acute', d3.format(',')(p.atl), C()[0]); tipRow(t, 'Chronic', d3.format(',')(p.ctl), muted); tipRow(t, 'Optimal', `${d3.format(',')(Math.round(p.lo))}–${d3.format(',')(Math.round(p.hi))}`); const [px, py] = d3.pointer(ev, el); place(t, el, px, py); })
+      .on('pointerleave', () => { dot.attr('opacity', 0); t.hidden = true; });
+  });
+
+  // ---------- training effect bars ----------
+  dash.draw('te', (el) => {
+    if (!ready(['effect'])) return failed(el, ['effect']);
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const rows = dash.data('effect').data.slice().sort((a, b) => (a.start_time < b.start_time ? -1 : 1));
+    if (!rows.length) return;
+    const W = Math.max(280, el.clientWidth), H = 220, m = { t: 10, r: 4, b: 24, l: 0 };
+    const y = d3.scaleLinear([0, 5], [H - m.b, m.t]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Aerobic and anaerobic training effect per session');
+    const yg = svg.append('g').call(d3.axisLeft(y).ticks(5).tickSize(0).tickPadding(4)); axisClean(yg);
+    let wl = 0; yg.selectAll('text').each(function () { wl = Math.max(wl, this.getComputedTextLength()); });
+    m.l = wl + 10; yg.attr('transform', `translate(${m.l},0)`);
+    svg.insert('g', ':first-child').selectAll('line').data(y.ticks(5)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--cds-chart-grid)');
+    const x = d3.scaleBand(rows.map((r) => r.id), [m.l, W - m.r]).padding(0.25);
+    const x2 = d3.scaleBand(['aerobic', 'anaerobic'], [0, x.bandwidth()]).padding(0.1);
+    const colr = { aerobic: C()[0], anaerobic: C()[2] };
+    const g = svg.append('g').selectAll('g').data(rows).join('g').attr('transform', (r) => `translate(${x(r.id)},0)`);
+    g.selectAll('rect').data((r) => ['aerobic', 'anaerobic'].map((k) => ({ k, v: Number(r[k]) || 0 }))).join('rect')
+      .attr('x', (d) => x2(d.k)).attr('width', Math.min(16, x2.bandwidth())).attr('y', (d) => y(d.v)).attr('height', (d) => Math.max(0, y(0) - y(d.v))).attr('rx', 0).style('fill', (d) => colr[d.k]).attr('class', 'bar');
+    const step = Math.ceil(rows.length / Math.max(2, Math.floor((W - m.l) / 60)));
+    rows.forEach((r, i) => { if ((rows.length - 1 - i) % step === 0) cap(svg, x(r.id) + x.bandwidth() / 2, H - 6, fmtShort(parse(r.start_time)), 'middle'); });
+    const t = tip(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.id) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.b - m.t).attr('fill', 'transparent')
+      .on('pointermove', (ev, r) => { tipHead(t, `${fmtShort(parse(r.start_time))} · ${typeName(r.type)}`); tipRow(t, 'Aerobic', r.aerobic ?? '—', C()[0]); tipRow(t, 'Anaerobic', r.anaerobic ?? '—', C()[2]); if (r.label) tipRow(t, '', nice(r.label)); const [px, py] = d3.pointer(ev, el); place(t, el, px, py); })
+      .on('pointerleave', () => { t.hidden = true; });
+  });
+
+  dash.draw('te-body', (el) => {
+    el.replaceChildren();
+    const q = dash.data('effect'); if (q.status !== 'ok') return;
+    q.data.slice().sort((a, b) => (a.start_time < b.start_time ? 1 : -1)).forEach((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.id;
+      cell(tr, fmtShort(parse(r.start_time))); cell(tr, typeName(r.type), '', sportColor(r.type)); cell(tr, r.name, 'hide-narrow');
+      cell(tr, r.aerobic == null ? '' : d3.format('.1f')(r.aerobic), 'num'); cell(tr, r.anaerobic == null ? '' : d3.format('.1f')(r.anaerobic), 'num');
+      cell(tr, r.label ? nice(r.label) : '', 'hide-narrow'); cell(tr, r.load == null ? '' : String(r.load), 'num');
+      el.append(tr);
+    });
+  });
+  // ---------- devices tab drawings ----------
+  const empty = (el, cols, text) => { const tr = document.createElement('tr'); tr.className = 'tx-empty-row'; const td = document.createElement('td'); td.colSpan = cols; td.textContent = text; tr.append(td); el.append(tr); };
+  value('d-ftp', 'device_summary', 'ftp');
+  value('d-ftp-src', 'device_summary', 'ftp_source');
+  value('d-ftp-date', 'device_summary', 'ftp_date', (v) => fmtLong(parse(v)));
+  value('d-wkg', 'device_summary', 'wkg', (v) => d3.format('.2f')(v));
+  value('d-tests', 'device_summary', 'tests');
+  value('d-entries', 'device_summary', 'entries');
+  value('d-last', 'device_summary', 'last_date', (v) => fmtShort(parse(v)));
+  const catColour = (c) => { c = String(c || '').toLowerCase(); return /weight|lift|strength|gym/.test(c) ? '#7c3aed' : /wahoo|trainer|kickr/.test(c) ? C()[0] : /bike|cycl|power meter/.test(c) ? C()[1] : /run/.test(c) ? C()[2] : muted; };
+
+  dash.draw('ftp-chart', (el) => {
+    if (!ready(['ftp_history'])) return failed(el, ['ftp_history']);
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const pts = dash.data('ftp_history').data.map((r) => ({ ...r, d: parse(r.date) })).filter((p) => !isNaN(p.d));
+    if (!pts.length) return;
+    const W = Math.max(260, el.clientWidth), H = 200, m = { t: 16, r: 16, b: 22, l: 0 };
+    const ext = d3.extent(pts, (p) => p.ftp); const pad = Math.max(10, (ext[1] - ext[0]) * 0.2);
+    const y = d3.scaleLinear([Math.max(0, ext[0] - pad), ext[1] + pad], [H - m.b, m.t]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'FTP over time');
+    const yg = svg.append('g').call(d3.axisLeft(y).ticks(4).tickSize(0).tickPadding(4)); axisClean(yg);
+    let wl = 0; yg.selectAll('text').each(function () { wl = Math.max(wl, this.getComputedTextLength()); });
+    m.l = wl + 10; yg.attr('transform', `translate(${m.l},0)`);
+    const dx = d3.extent(pts, (p) => p.d); if (+dx[0] === +dx[1]) { dx[0] = d3.utcMonth.offset(dx[0], -1); dx[1] = d3.utcMonth.offset(dx[1], 1); }
+    const x = d3.scaleUtc(dx, [m.l + 8, W - m.r]);
+    svg.insert('g', ':first-child').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', 'var(--cds-chart-grid)');
+    const tests = pts.filter((p) => p.kind === 'test');
+    if (tests.length > 1) svg.append('path').datum(tests).attr('d', d3.line((p) => x(p.d), (p) => y(p.ftp))).attr('fill', 'none').style('stroke', C()[1]).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+    svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', (p) => x(p.d)).attr('cy', (p) => y(p.ftp)).attr('r', 5).style('fill', (p) => (p.kind === 'test' ? C()[1] : muted));
+    cap(svg, m.l + 8, H - 4, fmtShort(dx[0]) + ' ' + d3.utcFormat('%Y')(dx[0]));
+    cap(svg, W - m.r, H - 4, fmtShort(dx[1]) + ' ' + d3.utcFormat('%Y')(dx[1]), 'end');
+    if (!tests.length) cap(svg, (m.l + W) / 2, m.t + 4, 'No FTP tests logged yet: only Garmin\u2019s estimate is shown', 'middle');
+    const t = tip(el);
+    svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', (p) => x(p.d)).attr('cy', (p) => y(p.ftp)).attr('r', 12).attr('fill', 'transparent')
+      .on('pointermove', (ev, p) => { tipHead(t, fmtLong(p.d)); tipRow(t, p.source, `${p.ftp} W`, p.kind === 'test' ? C()[1] : muted); if (p.wkg != null) tipRow(t, '', `${d3.format('.2f')(p.wkg)} W/kg`); if (p.notes) tipRow(t, '', p.notes); const [px, py] = d3.pointer(ev, el); place(t, el, px, py); })
+      .on('pointerleave', () => { t.hidden = true; });
+  });
+  dash.draw('ftp-body', (el) => {
+    el.replaceChildren();
+    const q = dash.data('ftp_history'); if (q.status !== 'ok') return;
+    if (!q.data.length) return empty(el, 5, 'No FTP results yet.');
+    q.data.slice().reverse().forEach((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.key;
+      cell(tr, fmtLong(parse(r.date))); cell(tr, String(r.ftp), 'num'); cell(tr, r.wkg == null ? '' : d3.format('.2f')(r.wkg), 'num');
+      cell(tr, r.source, '', r.kind === 'test' ? C()[1] : muted); cell(tr, r.notes, 'hide-narrow');
+      el.append(tr);
+    });
+  });
+  dash.draw('log-body', (el) => {
+    el.replaceChildren();
+    const q = dash.data('device_log'); if (q.status !== 'ok') return;
+    if (!q.data.length) return empty(el, 7, 'No device readings logged yet. Send your first readings in the chat to start the log.');
+    q.data.slice().sort((a, b) => (String(a.Date) < String(b.Date) ? 1 : -1)).forEach((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.Entry;
+      cell(tr, r.Date ? fmtShort(parse(r.Date)) : ''); cell(tr, r.Category || '', '', catColour(r.Category)); cell(tr, r.Device || '');
+      cell(tr, r.Session || '', 'hide-narrow'); cell(tr, r.Metric || ''); cell(tr, [r.Value, r.Unit].filter((x) => x !== '' && x != null).join(' '), 'num'); cell(tr, r.Notes || '', 'hide-narrow');
+      el.append(tr);
+    });
+  });
+  dash.draw('dev-body', (el) => {
+    el.replaceChildren();
+    const q = dash.data('devices'); if (q.status !== 'ok') return;
+    if (!q.data.length) return empty(el, 3, 'No devices found.');
+    q.data.forEach((r) => { const tr = document.createElement('tr'); tr.dataset.key = r.device_id; cell(tr, r.device_id); cell(tr, r.device_name); cell(tr, r.model, 'hide-narrow'); el.append(tr); });
+  });
+})();
+</script>
+<script src="settings.js"></script>
+</body>
+</html>
