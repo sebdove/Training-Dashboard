@@ -1,6 +1,6 @@
-# T100 Training Dashboard
+# Training Dashboard
 
-A personal training dashboard for T100 triathlon preparation. It pulls your data live from **Garmin Connect** (built and tested with a Fenix 8) and combines it with your own season plan, race countdown, FTP tests and training-device readings.
+A personal training dashboard for athelte preparation. It pulls your data live from **Garmin Connect** (built and tested with a Fenix 8) and combines it with your own season plan, race countdown, FTP tests and training-device readings.
 
 It runs as a small server on your own computer. Open it in a browser, or install it as an app from the browser.
 
