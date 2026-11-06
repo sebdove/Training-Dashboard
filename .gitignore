@@ -1,0 +1,13 @@
+# Your Garmin sign-in tokens: never commit these
+.garminconnect/
+# Your own race, phases, FTP tests and device log
+data/*.json
+!data/*.example.json
+*.tmp
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+build/
+dist/
