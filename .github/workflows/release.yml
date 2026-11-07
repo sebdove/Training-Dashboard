@@ -1,4 +1,3 @@
-.github/workflows/release.yml
 # Builds the downloadable app for Windows, macOS and Linux.
 # Publish a release on GitHub (Releases -> Draft a new release) and the downloads are attached to it
 # automatically. You can also run it by hand from the Actions tab to get test builds.
