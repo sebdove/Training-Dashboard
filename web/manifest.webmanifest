@@ -1,7 +1,7 @@
 {
-  "name": "T100 Training Dashboard",
-  "short_name": "T100",
-  "description": "Garmin training, season phases and race countdown for a T100 triathlon.",
+  "name": "Training Dashboard",
+  "short_name": "Training",
+  "description": "Garmin training, season phases and countdown to the event you're training for.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>T100 Training Dashboard</title>
-<meta name="description" content="Your Garmin training, season phases and race countdown for a T100 triathlon.">
+<title>Training Dashboard</title>
+<meta name="description" content="Your Garmin training, season phases and countdown to the event you're training for.">
 <meta name="theme-color" content="#183029">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -180,9 +180,9 @@
 
 <div class="tx">
   <header class="tx-band" id="overview">
-    <div class="brand"><i></i>Garmin Fenix 8 · T100 race prep<button type="button" class="tx-mode" aria-pressed="false" title="Switch between light and dark"><span class="to-dark">Dark mode</span><span class="to-light" hidden>Light mode</span></button></div>
-    <h1>T100 training dashboard</h1>
-    <p class="tx-race"><b data-draw="race-name" data-source="countdown" data-field="race">—</b> · <b data-draw="race-date" data-source="countdown" data-field="date">—</b> · 2km swim, 80km bike, 18km run</p>
+    <div class="brand"><i></i><span data-draw="goal-name" data-source="countdown" data-field="race">—</span>&nbsp;· Garmin training<button type="button" class="tx-mode" aria-pressed="false" title="Switch between light and dark"><span class="to-dark">Dark mode</span><span class="to-light" hidden>Light mode</span></button></div>
+    <h1>Training dashboard</h1>
+    <p class="tx-race"><b data-draw="race-name" data-source="countdown" data-field="race">—</b> · <b data-draw="race-date" data-source="countdown" data-field="date">—</b> <span data-draw="race-dist-wrap" data-source="race"></span></p>
     <p>This week so far: <b data-draw="t-week" data-source="summary" data-field="week_h">—</b> hours across <b data-draw="t-sessions" data-source="summary" data-field="sessions">—</b> sessions, against a <b data-draw="t-avg" data-source="summary" data-field="avg4_h">—</b> hour weekly average over the previous four weeks.</p>
 
   <div class="tx-tiles">
@@ -232,7 +232,7 @@
   </nav>
 
   <section class="tx-page" id="page-overview" role="tabpanel" aria-labelledby="tab-overview">
-  <h2 class="tx-section">T100 London <span class="tag">Race prep</span></h2>
+  <h2 class="tx-section"><span data-draw="goal-name" data-source="countdown" data-field="race">—</span> <span class="tag">Goal prep</span></h2>
   <div class="tx-grid">
     <section class="tx-card wide t100" id="season">
       <h2>Season plan to race day</h2>
@@ -243,14 +243,14 @@
         <span><i class="pk" data-k="power-endurance"></i>Power endurance</span>
         <span><i class="pk" data-k="endurance"></i>Endurance</span>
         <span><i class="pk" data-k="capacity"></i>Work capacity</span>
-        <span><i class="pk" data-k="mock"></i>Mock T100 race</span>
+        <span><i class="pk" data-k="mock"></i>Mock race</span>
       </div>
       <div class="tx-phase-row dash-skeleton" data-draw="phase-cards" data-source="phase_list countdown" role="list"></div>
       <div class="tx-phase-detail" data-draw="phase-detail" data-source="phase_list" aria-live="polite"></div>
     </section>
     <section class="tx-card wide t100" id="readiness">
       <h2>Race-distance readiness</h2>
-      <p class="note">Your longest single swim, bike and run in the last 4 weeks. The dark line on each bar is the T100 distance: 2km, 80km and 18km.</p>
+      <p class="note">Your longest single swim, bike and run in the last 4 weeks. The dark line on each bar is your goal event's distance for that sport.</p>
       <div class="tx-chart ready dash-skeleton" data-draw="readiness" data-source="readiness"></div>
     </section>
   </div>
@@ -270,7 +270,7 @@
     </section>
     <section class="tx-card" id="split">
       <h2>Discipline split, last 4 weeks</h2>
-      <p class="note">Share of swim, bike and run time. In a T100 the bike is usually more than half of race time.</p>
+      <p class="note">Share of swim, bike and run time. In most triathlons the bike is the biggest share of race time.</p>
       <div class="tx-chart short dash-skeleton" data-draw="split" data-source="split"></div>
     </section>
     <section class="tx-card" id="distance">
@@ -458,16 +458,17 @@
     </div>
   </section>
   <section class="tx-page" id="page-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
-    <h2 class="tx-section">Your race</h2>
+    <h2 class="tx-section">Your goal event</h2>
     <div class="tx-card">
       <div class="tx-form" id="race-form">
-        <label>Race name<input name="Race" placeholder="London T100 Triathlon"></label>
-        <label>Race date<input name="Date" type="date"></label>
+        <label>What you're training for<input name="Race" placeholder="London T100, Ironman 70.3, Half marathon…"></label>
+        <label>Event date<input name="Date" type="date"></label>
         <label>Swim (km)<input name="Swim km" type="number" step="0.1" min="0"></label>
         <label>Bike (km)<input name="Bike km" type="number" step="1" min="0"></label>
         <label>Run (km)<input name="Run km" type="number" step="0.1" min="0"></label>
+        <p class="note" style="grid-column:1/-1;margin:0">The name appears across the dashboard. Leave a distance at 0 for sports your event doesn't include.</p>
       </div>
-      <div class="tx-actions"><button class="tx-btn" type="button" id="race-save">Save race</button><span class="tx-msg" id="race-msg"></span></div>
+      <div class="tx-actions"><button class="tx-btn" type="button" id="race-save">Save goal</button><span class="tx-msg" id="race-msg"></span></div>
     </div>
 
     <h2 class="tx-section">Season phases</h2>
@@ -514,6 +515,25 @@
       <div class="tx-table-wrap" style="margin-top:16px">
         <table><thead><tr><th>Date</th><th>Type</th><th>Metric</th><th class="num">Value</th><th></th></tr></thead><tbody id="log-manage"></tbody></table>
       </div>
+    </div>
+
+    <h2 class="tx-section">Coach plan</h2>
+    <div class="tx-card" id="coach-card">
+      <p class="note"><b>If you're coached:</b> paste the plan link your coach gave you. Your goal event and season phases then come from your coach and update by themselves whenever they change the plan (checked every 10 minutes). Your Garmin data, FTP tests and device log stay your own.</p>
+      <div class="tx-form">
+        <label>Coach plan link<input id="coach-url" type="url" placeholder="https://raw.githubusercontent.com/…/plans/your-name.json"></label>
+      </div>
+      <div class="tx-actions">
+        <button class="tx-btn" type="button" id="coach-save">Use this plan</button>
+        <button class="tx-btn ghost" type="button" id="coach-remove">Stop using a coach plan</button>
+        <span class="tx-msg" id="coach-msg"></span>
+      </div>
+      <p class="note" style="margin-top:22px"><b>If you're a coach:</b> set up the goal event and phases above, then export them as a plan file. Put the file online (see the README) and give each athlete its link. When you change their plan, export again and replace the file: their dashboards pick it up automatically.</p>
+      <div class="tx-form">
+        <label>Your name (shown to athletes)<input id="export-coach" placeholder="Coach name"></label>
+        <label>Note to athletes (optional)<input id="export-message" placeholder="Test week: go hard on Thursday"></label>
+      </div>
+      <div class="tx-actions"><button class="tx-btn ghost" type="button" id="plan-export">Export plan for athletes</button></div>
     </div>
 
     <h2 class="tx-section">Garmin</h2>
@@ -709,7 +729,7 @@
 
   dash.calc('readiness', {
     title: 'Longest session vs race distance',
-    description: 'Longest single swim, bike and run in the last 28 days, as a share of the T100 race distances.',
+    description: 'Longest single swim, bike and run in the last 28 days, as a share of your goal event\u2019s distances (sports with no distance are left out).',
     inputs: ['activities', 'race'],
     fn: (activities, race) => {
       const r = race[0] || {};
@@ -724,7 +744,7 @@
         if (!best[sp] || km > best[sp].km) best[sp] = { km, date: String(a.start_time).slice(0, 10), name: a.name };
       }
       const target = { Swim: Number(r['Swim km']), Bike: Number(r['Bike km']), Run: Number(r['Run km']) };
-      return ['Swim', 'Bike', 'Run'].map((sp) => {
+      return ['Swim', 'Bike', 'Run'].filter((sp) => target[sp] > 0).map((sp) => {
         const km = best[sp] ? Math.round(best[sp].km * 10) / 10 : 0;
         return { sport: sp, longest_km: km, race_km: target[sp], share: target[sp] ? Math.round((km / target[sp]) * 1000) / 1000 : null, date: best[sp] ? best[sp].date : null, name: best[sp] ? best[sp].name : null };
       });
@@ -1165,6 +1185,15 @@
   try { darkNow = window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { darkNow = false; }
   setMode(darkNow);
   document.querySelectorAll('.tx-mode').forEach((b) => b.addEventListener('click', () => { darkNow = !darkNow; setMode(darkNow); }));
+
+  // ---------- goal event name and distances ----------
+  dash.draw('goal-name', (el) => { const r = one('countdown'); el.textContent = r && r.race ? r.race : 'Your goal'; });
+  dash.draw('race-dist-wrap', (el) => {
+    const q = dash.data('race'); const r = q.status === 'ok' ? q.data[0] : null;
+    if (!r) { el.textContent = ''; return; }
+    const parts = [['Swim km', 'swim'], ['Bike km', 'bike'], ['Run km', 'run']].filter(([k]) => Number(r[k]) > 0).map(([k, n]) => `${d3.format(',')(Number(r[k]))}km ${n}`);
+    el.textContent = parts.length ? ' · ' + parts.join(', ') : '';
+  });
 
   // ---------- tabs ----------
   const showTab = (name) => {

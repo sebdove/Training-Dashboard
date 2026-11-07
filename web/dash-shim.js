@@ -1,4 +1,4 @@
-/* T100 dashboard runtime.
+/* Training Dashboard runtime.
  * A small stand-in for the data layer the dashboard was first built on: it fetches each
  * dataset from the local server, works out the calculated tables, and redraws every
  * [data-draw] element whenever data, filters, visibility or width change.
@@ -56,7 +56,7 @@
     state[id] = prev ? Object.assign({}, prev, { refreshing: true, url }) : { status: 'loading', data: [], columns: [], url };
     api(url).then((body) => {
       if (state[id].url !== url) return;
-      state[id] = { status: 'ok', data: body.rows || [], columns: body.columns || [], cut: !!body.cut, url, refreshing: false };
+      state[id] = { status: 'ok', data: body.rows || [], columns: body.columns || [], cut: !!body.cut, source: body.source || null, url, refreshing: false };
       schedule();
     }).catch((e) => {
       if (state[id].url !== url) return;
@@ -87,7 +87,7 @@
     }
     if (!state[id]) { state[id] = { status: 'idle' }; load(id); }
     const s = state[id];
-    return { status: s.status === 'idle' ? 'loading' : s.status, data: s.data || [], columns: s.columns || [], message: s.message, refreshing: !!s.refreshing, meta: [] };
+    return { status: s.status === 'idle' ? 'loading' : s.status, data: s.data || [], columns: s.columns || [], message: s.message, refreshing: !!s.refreshing, source: s.source || null, meta: [] };
   }
 
   let pending = false;

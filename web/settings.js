@@ -12,11 +12,13 @@
   };
   const formRow = (form) => Object.fromEntries([...form.querySelectorAll('[name]')].map((el) => [el.name, el.value.trim()]));
   const today = () => new Date().toISOString().slice(0, 10);
+  const token = () => { try { return localStorage.getItem('t100_token') || ''; } catch (e) { return ''; } };
 
   // ---- race
   async function loadRace() {
     const r = (await getStore('race'))[0] || {};
     document.querySelectorAll('#race-form [name]').forEach((el) => { el.value = r[el.name] ?? ''; });
+    if (coachedNow) lockPlan(true, coachWho);
   }
   $('#race-save').addEventListener('click', async () => {
     try { await putStore('race', [formRow($('#race-form'))]); say('#race-msg', 'Saved.'); }
@@ -47,6 +49,7 @@
   async function loadPhases() {
     const body = $('#phase-edit tbody'); body.replaceChildren();
     (await getStore('phases')).forEach((p) => body.append(phaseRow(p)));
+    if (coachedNow) lockPlan(true, coachWho);
   }
   $('#phase-add').addEventListener('click', () => $('#phase-edit tbody').append(phaseRow()));
   $('#phase-save').addEventListener('click', async () => {
@@ -102,8 +105,61 @@
     catch (e) { say('#garmin-msg', e.message, true); }
   });
 
+  // ---- coach plan (athlete side): race and phases come from the coach's shared file
+  let coachedNow = false, coachWho = '';
+  function lockPlan(coached, who) {
+    coachedNow = coached; coachWho = who || '';
+    document.querySelectorAll('#race-form [name], #phase-edit input, #phase-edit textarea, #phase-edit button, #race-save, #phase-add, #phase-save')
+      .forEach((el) => { el.disabled = coached; });
+    say('#race-msg', coached ? `Set by ${who || 'your coach'}.` : '');
+    say('#phase-msg', coached ? `Set by ${who || 'your coach'}. Changes they make appear here automatically.` : '');
+  }
+  async function loadCoach() {
+    const s = await dash.api('/api/settings');
+    $('#coach-url').value = s.coach_url || '';
+    const coached = !!s.coach_url && !s.coach_error;
+    lockPlan(coached, s.coach);
+    if (s.coach_url && s.coach_error) say('#coach-msg', `Couldn't reach the plan link just now: ${s.coach_error}`, true);
+    else if (coached) say('#coach-msg', `Following ${s.coach || 'your coach'}'s plan${s.coach_updated ? `, last changed ${s.coach_updated.replace('T', ' ')}` : ''}.`);
+    else say('#coach-msg', '');
+    showBanner('coach', coached && s.coach_message ? `${s.coach || 'Your coach'}: ${s.coach_message}` : '', null);
+  }
+  async function setCoach(url) {
+    say('#coach-msg', url ? 'Checking the link…' : 'Removing…');
+    try { await dash.api('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ coach_url: url }) }); }
+    catch (e) { return say('#coach-msg', e.message, true); }
+    dash.refresh('race'); dash.refresh('phases');
+    await loadCoach().catch(() => {}); loadRace().catch(() => {}); loadPhases().catch(() => {});
+  }
+  $('#coach-save').addEventListener('click', () => setCoach($('#coach-url').value.trim()));
+  $('#coach-remove').addEventListener('click', () => setCoach(''));
+  // Re-check the coach's plan while the dashboard stays open.
+  setInterval(() => { dash.refresh('race'); dash.refresh('phases'); loadCoach().catch(() => {}); }, 10 * 60 * 1000);
+
+  // ---- coach plan (coach side): export race and phases as a file to share
+  $('#plan-export').addEventListener('click', () => {
+    const q = new URLSearchParams({ coach: $('#export-coach').value.trim(), message: $('#export-message').value.trim() });
+    const t = token(); if (t) q.set('token', t);
+    const a = document.createElement('a'); a.href = `/api/export-plan?${q}`; a.download = 'training-plan.json'; document.body.append(a); a.click(); a.remove();
+  });
+
+  // ---- banners: coach notes and app updates
+  function showBanner(kind, text, link) {
+    let el = document.querySelector(`.tx-banner[data-kind="${kind}"]`);
+    if (!text) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div'); el.className = 'tx-banner'; el.dataset.kind = kind;
+      const band = document.querySelector('.tx-band'); band.after(el);
+    }
+    el.replaceChildren(document.createTextNode(text));
+    if (link) { const a = document.createElement('a'); a.href = link.href; a.target = '_blank'; a.rel = 'noopener'; a.textContent = link.text; el.append(' ', a); }
+  }
+  dash.api('/api/version').then((v) => {
+    if (v.update) showBanner('update', `A new version of the Training Dashboard is available (${v.latest}; you have ${v.version}).`, { href: v.url, text: 'Download it' });
+  }).catch(() => {});
+
   document.querySelectorAll('#ftp-form [name="Date"], #log-form [name="Date"]').forEach((el) => { el.value = today(); });
-  function init() { loadRace().catch(() => {}); loadPhases().catch(() => {}); loadLog().catch(() => {}); }
+  function init() { loadRace().catch(() => {}); loadPhases().catch(() => {}); loadLog().catch(() => {}); loadCoach().catch(() => {}); }
   init();
 
   // Keep the page background in step with dark mode.

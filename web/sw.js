@@ -1,5 +1,5 @@
 /* Caches the app shell so the dashboard opens like an app. Garmin data (/api/) always comes from the server. */
-const CACHE = 't100-shell-v1';
+const CACHE = 'training-shell-v3';
 const SHELL = ['./', 'index.html', 'base.css', 'd3.min.js', 'dash-shim.js', 'settings.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
   'fonts/montserrat-latin-400-normal.woff2', 'fonts/montserrat-latin-600-normal.woff2',

@@ -1,4 +1,4 @@
-"""T100 Training Dashboard - local sync server.
+"""Training Dashboard - local sync server.
 
 Logs in to Garmin Connect with your own account (via the open-source
 `garminconnect` library), reshapes the data into the tables the dashboard
@@ -27,10 +27,15 @@ from typing import Any, Callable
 
 from flask import Flask, abort, jsonify, request, send_from_directory
 
-ROOT = Path(__file__).resolve().parent.parent
+FROZEN = getattr(sys, "frozen", False)  # running as the downloadable app (PyInstaller)
+ROOT = Path(getattr(sys, "_MEIPASS", "")) if FROZEN else Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
-DATA = Path(os.getenv("T100_DATA_DIR", ROOT / "data")).expanduser()
-TOKENS = Path(os.getenv("GARMINTOKENS", ROOT / ".garminconnect")).expanduser()
+# The downloadable app keeps your data in a folder in your home directory; from source, next to the code.
+HOME_DIR = Path.home() / "TrainingDashboard"
+if not HOME_DIR.exists() and (Path.home() / "T100Dashboard").exists():  # keep data from earlier versions
+    HOME_DIR = Path.home() / "T100Dashboard"
+DATA = Path(os.getenv("T100_DATA_DIR", HOME_DIR / "data" if FROZEN else ROOT / "data")).expanduser()
+TOKENS = Path(os.getenv("GARMINTOKENS", HOME_DIR / ".garminconnect" if FROZEN else ROOT / ".garminconnect")).expanduser()
 CACHE_SECONDS = int(os.getenv("T100_CACHE_SECONDS", "900"))
 APP_TOKEN = os.getenv("T100_APP_TOKEN", "")  # optional: require this token when hosted remotely
 
@@ -60,10 +65,10 @@ def garmin():
         try:
             client.login(str(TOKENS))
         except Exception as e:
-            raise RuntimeError(
-                "Not signed in to Garmin. Run `python server/app.py --login` once, "
-                "or set GARMIN_EMAIL and GARMIN_PASSWORD."
-            ) from e
+            how = ("Close the Training Dashboard window and start it again with --login, or delete the "
+                   f"{TOKENS} folder and start it again." if FROZEN else
+                   "Run `python server/app.py --login` once, or set GARMIN_EMAIL and GARMIN_PASSWORD.")
+            raise RuntimeError(f"Not signed in to Garmin. {how}") from e
         _client = client
         return client
 
@@ -407,32 +412,171 @@ def store_path(name: str) -> Path:
     return DATA / f"{name}.json"
 
 
+COACHED = ("race", "phases")  # what a coach's shared plan can set
+COACH_SECONDS = int(os.getenv("T100_COACH_SECONDS", "600"))
+
+
+def _clean(name: str, rows: Any) -> list[dict[str, str]]:
+    cols = STORES[name]
+    if not isinstance(rows, list):
+        return []
+    return [{c: ("" if r.get(c) is None else str(r.get(c))[:2000]) for c in cols} for r in rows[:5000] if isinstance(r, dict)]
+
+
+def _write_json(p: Path, value: Any) -> None:
+    with _store_lock:
+        DATA.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(value, indent=1, ensure_ascii=False), "utf-8")
+        tmp.replace(p)
+
+
+def settings() -> dict[str, Any]:
+    p = DATA / "settings.json"
+    try:
+        return json.loads(p.read_text("utf-8")) if p.exists() else {}
+    except ValueError:
+        return {}
+
+
+def _fetch_json(url: str, timeout: int = 10) -> Any:
+    import urllib.request
+
+    req = urllib.request.Request(url, headers={"User-Agent": "training-dashboard", "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 - https only, checked below
+        return json.loads(r.read(2_000_000).decode("utf-8"))
+
+
+_coach: dict[str, Any] = {"at": 0.0, "url": "", "plan": None, "error": None}
+_coach_lock = threading.Lock()
+
+
+def coach_plan(force: bool = False) -> dict[str, Any] | None:
+    """Your coach's shared plan (race and phases), re-read every 10 minutes."""
+    url = (settings().get("coach_url") or "").strip()
+    if not url:
+        return None
+    with _coach_lock:
+        fresh = _coach["url"] == url and time.time() - _coach["at"] < COACH_SECONDS
+        if fresh and not force:
+            return _coach["plan"]
+        try:
+            raw = _fetch_json(url)
+            if not isinstance(raw, dict):
+                raise ValueError("The plan file isn't in the right format.")
+            plan = {k: _clean(k, raw.get(k)) for k in COACHED if k in raw}
+            plan["message"] = str(raw.get("message") or "")[:500]
+            plan["coach"] = str(raw.get("coach") or "")[:120]
+            plan["updated"] = str(raw.get("updated") or "")[:40]
+            _coach.update(at=time.time(), url=url, plan=plan, error=None)
+        except Exception as e:  # keep the last good copy if the link is briefly unreachable
+            log.warning("Couldn't read the coach plan: %s", e)
+            _coach.update(at=time.time(), url=url, error=str(e))
+            if _coach.get("plan") is None or _coach["url"] != url:
+                _coach["plan"] = None
+        return _coach["plan"]
+
+
 @app.get("/api/store/<name>")
 @needs_token
 def get_store(name):
     p = store_path(name)
+    if name in COACHED:
+        plan = coach_plan()
+        if plan and name in plan:
+            return table(STORES[name], plan[name], source="coach", coach=plan.get("coach"), updated=plan.get("updated"))
     example = ROOT / "data" / f"{name}.example.json"
     src = p if p.exists() else example if example.exists() else None
     rows = json.loads(src.read_text("utf-8")) if src else []
-    return table(STORES[name], rows)
+    return table(STORES[name], rows, source="local")
 
 
 @app.put("/api/store/<name>")
 @needs_token
 def put_store(name):
     p = store_path(name)
+    if name in COACHED and (coach_plan() or {}).get(name) is not None:
+        return jsonify({"error": "Your coach manages this. Remove the coach plan link in Settings to edit it yourself."}), 409
     body = request.get_json(force=True, silent=False)
     rows = body.get("rows") if isinstance(body, dict) else body
     if not isinstance(rows, list) or len(rows) > 5000:
         abort(400)
-    cols = STORES[name]
-    clean = [{c: ("" if r.get(c) is None else str(r.get(c))[:2000]) for c in cols} for r in rows if isinstance(r, dict)]
-    with _store_lock:
-        DATA.mkdir(parents=True, exist_ok=True)
-        tmp = p.with_suffix(".tmp")
-        tmp.write_text(json.dumps(clean, indent=1, ensure_ascii=False), "utf-8")
-        tmp.replace(p)
-    return table(cols, clean)
+    clean = _clean(name, rows)
+    _write_json(p, clean)
+    return table(STORES[name], clean, source="local")
+
+
+@app.get("/api/settings")
+@needs_token
+def get_settings():
+    s = settings()
+    plan = coach_plan() if s.get("coach_url") else None
+    return jsonify({"coach_url": s.get("coach_url", ""), "coach": (plan or {}).get("coach", ""),
+                    "coach_message": (plan or {}).get("message", ""), "coach_updated": (plan or {}).get("updated", ""),
+                    "coach_error": _coach.get("error") if s.get("coach_url") else None})
+
+
+@app.put("/api/settings")
+@needs_token
+def put_settings():
+    body = request.get_json(force=True) or {}
+    s = settings()
+    if "coach_url" in body:
+        url = str(body.get("coach_url") or "").strip()
+        if url and not url.startswith("https://"):
+            return jsonify({"error": "The coach plan link must start with https://"}), 400
+        if url:
+            try:
+                raw = _fetch_json(url)
+                if not isinstance(raw, dict) or not any(k in raw for k in COACHED):
+                    raise ValueError("That link doesn't contain a training plan.")
+            except Exception as e:
+                return jsonify({"error": f"Couldn't read that link: {e}"}), 400
+        s["coach_url"] = url
+    _write_json(DATA / "settings.json", s)
+    with _coach_lock:
+        _coach.update(at=0.0, url="", plan=None, error=None)
+    return get_settings()
+
+
+@app.get("/api/export-plan")
+@needs_token
+def export_plan():
+    """Your race and phases as a plan file to share with the people you coach."""
+    def rows(name):
+        p = store_path(name)
+        example = ROOT / "data" / f"{name}.example.json"
+        src = p if p.exists() else example if example.exists() else None
+        return json.loads(src.read_text("utf-8")) if src else []
+
+    plan = {"t100_plan": 1, "coach": request.args.get("coach", "")[:120], "message": request.args.get("message", "")[:500],
+            "updated": dt.datetime.now().isoformat(timespec="minutes"), "race": rows("race"), "phases": rows("phases")}
+    res = app.response_class(json.dumps(plan, indent=1, ensure_ascii=False), mimetype="application/json")
+    res.headers["Content-Disposition"] = "attachment; filename=training-plan.json"
+    return res
+
+
+# --------------------------------------------------------------------------
+# App updates
+# --------------------------------------------------------------------------
+@app.get("/api/version")
+def version():
+    try:
+        from version import REPO, VERSION
+    except ImportError:
+        REPO, VERSION = "", "dev"
+    info = {"version": VERSION, "repo": REPO, "latest": None, "url": None, "update": False}
+    if REPO and VERSION != "dev":
+        def fetch():
+            r = _fetch_json(f"https://api.github.com/repos/{REPO}/releases/latest")
+            return {"latest": r.get("tag_name"), "url": r.get("html_url")}
+        try:
+            latest = cached("version", fetch)
+            info.update(latest)
+            info["update"] = bool(latest.get("latest")) and latest["latest"].lstrip("v") != VERSION.lstrip("v")
+        except Exception as e:
+            log.info("Update check failed: %s", e)
+    return jsonify(info)
 
 
 # --------------------------------------------------------------------------
@@ -451,7 +595,7 @@ def static_files(path):
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="T100 Training Dashboard server")
+    ap = argparse.ArgumentParser(description="Training Dashboard server")
     ap.add_argument("--login", action="store_true", help="sign in to Garmin and save tokens, then exit")
     ap.add_argument("--host", default=os.getenv("T100_HOST", "127.0.0.1"))
     ap.add_argument("--port", type=int, default=int(os.getenv("T100_PORT", "8100")))
@@ -463,7 +607,7 @@ def main() -> None:
     if args.host not in ("127.0.0.1", "localhost") and not APP_TOKEN:
         print("Refusing to listen beyond this computer without T100_APP_TOKEN set (see README).", file=sys.stderr)
         sys.exit(2)
-    print(f"T100 dashboard running at http://{args.host}:{args.port}")
+    print(f"Training Dashboard running at http://{args.host}:{args.port}")
     app.run(host=args.host, port=args.port, threaded=True)
 
 
